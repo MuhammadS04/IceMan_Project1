@@ -17,9 +17,7 @@ private:
 	Ice* iceField[64][64];
 public:
 	StudentWorld(std::string assetDir)
-		: GameWorld(assetDir)
-	{
-	}
+		: GameWorld(assetDir){}
 
 	virtual int init();
 

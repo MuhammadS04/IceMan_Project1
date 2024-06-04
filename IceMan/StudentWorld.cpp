@@ -33,8 +33,10 @@ int StudentWorld::init()
 
 int StudentWorld::move()
 {
-	// This code is here merely to allow the game to build, run, and terminate after you hit enter a few times.
-	// Notice that the return value GWSTATUS_PLAYER_DIED will cause our framework to end the current level.
-	decLives();
+	m_iceman->move();
+	//// This code is here merely to allow the game to build, run, and terminate after you hit enter a few times.
+	//// Notice that the return value GWSTATUS_PLAYER_DIED will cause our framework to end the current level.
+	//decLives();
+
 	return GWSTATUS_PLAYER_DIED;
 }
