@@ -40,22 +40,30 @@ public:
 
 	// Move this actor to x,y if possible, and return true; otherwise,
 	// return false without moving.
-	bool moveToIfPossible(int x, int y)
+		bool moveToIfPossible(int x, int y)
 	{
-		// Make sure x and y are within the screen
-		if (x < 0 || y < 0 || x >= VIEW_WIDTH - 2|| y >= VIEW_HEIGHT - 3 )
+		//make sure the x and y are within the screen
+		if (x > 60 || y > 60)
 		{
 			return false;
 		}
 
-		// Make sure it's not blocked
-		// if (getWorld()->isBlocked(x, y))
-		//     return false;
+		////make sure its not blocked
+		//if (getWorld()->isBlocked(x, y))
+		//    return false;
+
 
 		GraphObject::moveTo(x, y);
 		return true;
-	}
 
+		//delete this
+		//if (getWorld()->canActorMoveTo(this, x, y))
+		//{
+		//	moveTo(x, y);
+		//	return true;
+		//}
+		//return false;
+	}
 	virtual bool annoy(unsigned int amt)
 	{
 		return true;
