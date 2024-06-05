@@ -30,8 +30,12 @@ void Iceman::move()
 			setDead();
 			break;
 		case KEY_PRESS_DOWN:
-			setDirection(down);
-			break;
+                if (getDirection() == down)
+                    moveToIfPossible(getX(), getY() - 1);
+                else
+                    setDirection(down);
+                break;
+			
 		}
 }
 
