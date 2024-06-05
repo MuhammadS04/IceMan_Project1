@@ -42,27 +42,18 @@ public:
 	// return false without moving.
 	bool moveToIfPossible(int x, int y)
 	{
-		//make sure the x and y are within the screen
-		if (x > 60 || y > 60)
+		// Make sure x and y are within the screen
+		if (x < 0 || y < 0 || x >= VIEW_WIDTH - 2|| y >= VIEW_HEIGHT - 3 )
 		{
 			return false;
 		}
 
-		////make sure its not blocked
-		//if (getWorld()->isBlocked(x, y))
-		//    return false;
-
+		// Make sure it's not blocked
+		// if (getWorld()->isBlocked(x, y))
+		//     return false;
 
 		GraphObject::moveTo(x, y);
 		return true;
-
-		//delete this
-		//if (getWorld()->canActorMoveTo(this, x, y))
-		//{
-		//	moveTo(x, y);
-		//	return true;
-		//}
-		//return false;
 	}
 
 	virtual bool annoy(unsigned int amt)
