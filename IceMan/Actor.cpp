@@ -44,7 +44,9 @@ void Iceman::move()
                 break;
             case KEY_PRESS_RIGHT:
                 if (getDirection() == right)
+                {
                     moveToIfPossible(getX() + 1, getY());
+                }
                 else
                     setDirection(right);
                 break;
@@ -56,8 +58,8 @@ void Iceman::move()
                 break;
 
 		}
-
-    getWorld()->clearIce(getX(), getY());
+    
+    getWorld()->clearIce(getX(), getY(), getDirection());
 
 }
 

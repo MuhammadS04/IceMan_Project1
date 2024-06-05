@@ -30,7 +30,7 @@ public:
 	{
 	}
 
-	void clearIce(int x, int y);
+	void clearIce(int x, int y, int dir);
 
 };
 

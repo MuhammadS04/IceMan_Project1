@@ -44,19 +44,42 @@ int StudentWorld::move()
     {
         return GWSTATUS_PLAYER_DIED;
     }
+    return GWSTATUS_CONTINUE_GAME;
+
 }
 
-void StudentWorld::clearIce(int x, int y) 
+void StudentWorld::clearIce(int x, int y, int dir) 
 {
+    int startX = x;
+    int startY = y;
+    int endX = x + 4;
+    int endY = y + 4;
 
-    for (int i = x; i < x + 4; i++)
-    {
-        for (int j = y; j < y + 4; j++)
-        {
-            if (i >= 0 && i < 64 && j >= 0 && j < 64 && m_iceField[i][j] != nullptr) // Check within bounds and if initialized
-            {
+    // Adjust the area to clear based on the direction
+    switch (dir) {
+    case KEY_PRESS_LEFT:
+        startX = x - 1;
+        endX = x + 3;
+        break;
+    case KEY_PRESS_RIGHT:
+        startX = x;
+        endX = x + 4;
+        break;
+    case KEY_PRESS_UP:
+        startY = y;
+        endY = y + 4;
+        break;
+    case KEY_PRESS_DOWN:
+        startY = y - 1;
+        endY = y + 3;
+        break;
+    }
+
+    for (int i = startX; i < endX; i++) {
+        for (int j = startY; j < endY; j++) {
+            if (i >= 0 && i < 64 && j >= 0 && j < 60 && m_iceField[j][i] != nullptr) {
                 delete m_iceField[j][i];
-                m_iceField[i][j] = nullptr;
+                m_iceField[j][i] = nullptr;
             }
         }
     }
