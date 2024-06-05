@@ -15,7 +15,8 @@ class StudentWorld : public GameWorld
 private:
 	Iceman* m_iceman;
 	Ice* m_iceField[64][64];
-	vector<Actor*> actors;
+	vector<Actor*> m_actors;
+	unsigned int m_barrelsLeft;
 	//vector<Protestor> protestors;
 
 public:
@@ -32,6 +33,13 @@ public:
 
 	void clearIce(int x, int y, int dir);
 
+	void updateDisplayText();
+
+	unsigned int getBarrelsLeft();
+
+	int annoyAllNearbyActors(Actor* a, int points, int radius);
+
+	void addActor(Actor* a);
 };
 
 #endif // STUDENTWORLD_H_

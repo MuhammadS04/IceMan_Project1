@@ -114,7 +114,7 @@ public:
 	}
 
 	// Pick up a gold nugget.
-	//virtual void addGold() = 0;
+	virtual void addGold() = 0;
 
 	// How many hit points does this actor have left?
 	unsigned int getHitPoints() const
@@ -134,14 +134,51 @@ public:
 class Iceman : public Agent
 {
 private:
+	unsigned int m_gold;
+	unsigned int m_water;
+	unsigned int m_sonar;
 	
 public:
 	Iceman(StudentWorld* world, int startX, int startY)
-		:Agent(world, startX, startY, right, IID_PLAYER, 10)
-	{}
+		:Agent(world, startX, startY, right, IID_PLAYER, 10), m_gold(0) , m_sonar(1), m_water(5)
+	{
+		setVisible(true);
+	}
 
 	virtual void move();
 
+	virtual bool annoy(int amount);
+
+	void addGold()
+	{
+		m_gold++;
+	}
+	void addSonar()
+	{
+		m_sonar++;
+	}
+	void addWater()
+	{
+		m_water += 5;
+	}
+
+	unsigned int getGold()
+	{
+		return m_gold;
+	}
+
+	unsigned int getSonar() const {
+		return m_sonar;
+	}
+
+	unsigned int getWater() const {
+		return m_water;
+	}
+
+	virtual bool canDigThroughIce()
+	{
+		return true;
+	}
 };
 
 
@@ -168,6 +205,20 @@ public:
 		: Actor(world, startX, startY, down, true, IID_BOULDER, 1.0, 1)
 		, m_state(1), m_numTicks(0)
 	{}
+
+	virtual void move();
+
+};
+
+class Squirt : public Actor
+{
+private:
+	unsigned int m_travelDis;
+public:
+	Squirt(StudentWorld* world, int startX, int startY, Direction startDir)
+		: Actor(world, startX, startY, startDir, true, IID_WATER_SPURT, 1.0, 1)
+		, m_travelDis(4)
+	{	}
 
 	virtual void move();
 
