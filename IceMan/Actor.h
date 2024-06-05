@@ -36,14 +36,15 @@ public:
 	void setDead()
 	{
 		m_isAlive = false;
+		setVisible(false);
 	}
 
 	// Move this actor to x,y if possible, and return true; otherwise,
 	// return false without moving.
 	bool moveToIfPossible(int x, int y)
 	{
-		//make sure the x and y are within the screen
-		if (x > 60 || y > 60)
+		// Make sure x and y are within the screen
+		if (x < 0 || y < 0 || x >= VIEW_WIDTH - 2 || y >= VIEW_HEIGHT - 3)
 		{
 			return false;
 		}
@@ -134,7 +135,7 @@ public:
 class Iceman : public Agent
 {
 private:
-
+	
 public:
 	Iceman(StudentWorld* world, int startX, int startY)
 		:Agent(world, startX, startY, right, IID_PLAYER, 10)

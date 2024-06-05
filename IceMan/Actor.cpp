@@ -22,6 +22,7 @@ void Iceman::move()
 {
 	if (!isAlive()) return;
 
+
 	int ch;
 	if (getWorld()->getKey(ch))
 		switch (ch)
@@ -53,7 +54,11 @@ void Iceman::move()
                 else
                     setDirection(up);
                 break;
+
 		}
+
+    getWorld()->clearIce(getX(), getY());
+
 }
 
 //Boulder-------------------------------------------------------------

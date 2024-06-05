@@ -30,6 +30,8 @@ public:
 	{
 	}
 
+	void clearIce(int x, int y);
+
 };
 
 #endif // STUDENTWORLD_H_

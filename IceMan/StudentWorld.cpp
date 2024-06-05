@@ -45,3 +45,20 @@ int StudentWorld::move()
         return GWSTATUS_PLAYER_DIED;
     }
 }
+
+void StudentWorld::clearIce(int x, int y) 
+{
+
+    for (int i = x; i < x + 4; i++)
+    {
+        for (int j = y; j < y + 4; j++)
+        {
+            if (i >= 0 && i < 64 && j >= 0 && j < 64 && m_iceField[i][j] != nullptr) // Check within bounds and if initialized
+            {
+                delete m_iceField[j][i];
+                m_iceField[i][j] = nullptr;
+            }
+        }
+    }
+}
+
