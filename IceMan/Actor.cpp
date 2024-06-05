@@ -35,7 +35,24 @@ void Iceman::move()
                 else
                     setDirection(down);
                 break;
-			
+            case KEY_PRESS_LEFT:
+                if (getDirection() == left)
+                    moveToIfPossible(getX() - 1, getY());
+                else
+                    setDirection(left);
+                break;
+            case KEY_PRESS_RIGHT:
+                if (getDirection() == right)
+                    moveToIfPossible(getX() + 1, getY());
+                else
+                    setDirection(right);
+                break;
+            case KEY_PRESS_UP:
+                if (getDirection() == up)
+                    moveToIfPossible(getX(), getY() + 1);
+                else
+                    setDirection(up);
+                break;
 		}
 }
 
