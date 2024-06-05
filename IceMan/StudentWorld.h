@@ -40,6 +40,18 @@ public:
 	int annoyAllNearbyActors(Actor* a, int points, int radius);
 
 	void addActor(Actor* a);
+
+	bool canActorMoveTo(Actor* a, int x, int y) const;
+
+	bool isNearIceman(Actor* a, int radius) const;
+
+	bool checkRadius(int x, int y, double radius) const;
+
+	int intPow(int x) const;
+
+	bool checkIce(int x, int y, GraphObject::Direction dir);
+
+	bool checkIceBoulder(int x, int y, GraphObject::Direction dir);
 };
 
 #endif // STUDENTWORLD_H_

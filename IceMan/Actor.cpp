@@ -33,11 +33,28 @@ void Iceman::move()
 
         case KEY_PRESS_SPACE:
             if (getWater() > 0) {
-                // more stuff
-                Squirt* s = new Squirt(getWorld(), getX(), getY(), getDirection());
-                getWorld()->addActor(s);
-                getWorld()->playSound(SOUND_PLAYER_SQUIRT);
-                m_water--;
+                int squirtX = getX();
+                int squirtY = getY();
+                switch (getDirection()) {
+                case up:
+                    squirtY += 4;
+                    break;
+                case down:
+                    squirtY -= 4;
+                    break;
+                case left:
+                    squirtX -= 4;
+                    break;
+                case right:
+                    squirtX += 4;
+                    break;
+                }
+                if (getWorld()->canActorMoveTo(this, squirtX, squirtY)) {
+                    Squirt* s = new Squirt(getWorld(), squirtX, squirtY, getDirection());
+                    getWorld()->addActor(s);
+                    getWorld()->playSound(SOUND_PLAYER_SQUIRT);
+                    m_water--;
+                }
             }
             break;
         case KEY_PRESS_DOWN:
@@ -90,53 +107,48 @@ bool Iceman::annoy(int amount)
 //SQUIRT----------------------------------------------------------------
 void Squirt::move()
 {
-    if (!isAlive()) {
-        return;
-    }
+        if (!isAlive()) return;
 
-    // Check if Squirt annoys any nearby actors
-    if (getWorld()->annoyAllNearbyActors(this, 2, 3)) {
-        setDead();
-        return;
-    }
-
-    // Check if Squirt has traveled its full distance
-    if (m_travelDis == 0) {
-        setDead();
-        return;
-    }
-
-    // Check if Squirt can move one square in the current direction
-    switch (getDirection()) {
-    case up:
-        if (!moveToIfPossible(getX(), getY() + 1)) {
+        // Check if Squirt annoys any nearby actors
+        if (getWorld()->annoyAllNearbyActors(this, 2, 3)) {
             setDead();
             return;
         }
-        break;
-    case down:
-        if (!moveToIfPossible(getX(), getY() - 1)) {
-            setDead();
-            return;
-        }
-        break;
-    case left:
-        if (!moveToIfPossible(getX() - 1, getY())) {
-            setDead();
-            return;
-        }
-        break;
-    case right:
-        if (!moveToIfPossible(getX() + 1, getY())) {
-            setDead();
-            return;
-        }
-        break;
-    default:
-        break;
-    }
 
-    m_travelDis--;
+        // Check if Squirt has traveled its full distance
+        if (m_travelDis == 0) {
+            setDead();
+            return;
+        }
+
+        // Determine the next position based on the current direction
+        int newX = getX();
+        int newY = getY();
+        switch (getDirection()) {
+        case up:
+            newY += 1;
+            break;
+        case down:
+            newY -= 1;
+            break;
+        case left:
+            newX -= 1;
+            break;
+        case right:
+            newX += 1;
+            break;
+        default:
+            break;
+        }
+
+        // Check if the Squirt can move to the new position
+        if (!getWorld()->canActorMoveTo(this, newX, newY)) {
+            setDead();
+        }
+        else {
+            moveTo(newX, newY);
+            m_travelDis--;
+        }
 }
 
 

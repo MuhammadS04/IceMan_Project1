@@ -145,3 +145,91 @@ int StudentWorld::annoyAllNearbyActors(Actor* a, int points, int radius) {
     }
     return actorsAnnoyed;
 }
+bool StudentWorld::canActorMoveTo(Actor* a, int x, int y) const
+{
+    // Check boundaries
+    if (x < 0 || x >= 64 || y < 0 || y >= 64) {
+        return false;
+    }
+
+    // Check if the location is occupied by Ice
+    for (int i = x; i < x + 4 && i < 64; i++) {
+        for (int j = y; j < y + 4 && j < 60; j++) {
+            if (m_iceField[j][i] != nullptr) {
+                return false;
+            }
+        }
+    }
+
+    // Check if the location is occupied by a Boulder
+    for (const auto& actor : m_actors) {
+        if (dynamic_cast<Boulder*>(actor) != nullptr) {
+            int boulderX = actor->getX();
+            int boulderY = actor->getY();
+            if (x >= boulderX && x < boulderX + 4 && y >= boulderY && y < boulderY + 4) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+
+bool StudentWorld::isNearIceman(Actor* a, int radius) const
+{
+    double distance = sqrt(intPow(a->getX() - m_iceman->getX()) + intPow(a->getY() - m_iceman->getY()));
+    if (distance <= radius) {
+        return true;
+    }
+    return false;
+}
+
+bool StudentWorld::checkRadius(int x, int y, double radius) const
+{
+    for (Actor* a : m_actors) {
+        int actor_x = a->getX();
+        int actor_y = a->getY();
+        double distance = sqrt(intPow(actor_x - x) + intPow(actor_y - y));
+        if (distance > radius)
+            continue;
+        else
+            return true;
+    }
+    return false;
+}
+
+int StudentWorld::intPow(int x) const
+{
+    return x * x;
+}
+
+bool StudentWorld::checkIce(int x, int y, GraphObject::Direction dir)
+{
+    if (m_iceField[x][y] != nullptr) return true;
+    for (int i = 0; i < 3; i++) {
+        switch (dir)
+        {
+        case GraphObject::up:
+            if (m_iceField[x + i][y] != nullptr) return true;
+            break;
+        case GraphObject::down:
+            if (m_iceField[x + i][y] != nullptr) return true;
+            break;
+        case GraphObject::left:
+            if (m_iceField[x][y + i] != nullptr) return true;
+            break;
+        case GraphObject::right:
+            if (m_iceField[x][y + i] != nullptr) return true;
+            break;
+        }
+    }
+    return false;
+}
+
+bool StudentWorld::checkIceBoulder(int x, int y, GraphObject::Direction dir)
+{
+    if (!checkIce(x, y, dir) && canActorMoveTo(m_iceman, x, y))
+        return true;
+    return false;
+}
