@@ -157,9 +157,9 @@ public:
 	{
 		m_sonar++;
 	}
-	void addWater()
+	void addWater(int n)
 	{
-		m_water += 5;
+		m_water += n;
 	}
 
 	unsigned int getGold()
@@ -195,19 +195,35 @@ public:
 	virtual void move() {};
 };
 
+
 class Boulder : public Actor
 {
-private: 
-	unsigned int m_state;
-	unsigned int m_numTicks;
+private:
+    int m_state;
+    int m_waitTicks;
+
+    const int STATE_STABLE = 0;
+    const int STATE_WAITING = 1;
+    const int STATE_FALLING = 2;
+
 public:
-	Boulder(StudentWorld* world, int startX, int startY)
-		: Actor(world, startX, startY, down, true, IID_BOULDER, 1.0, 1)
-		, m_state(1), m_numTicks(0)
-	{}
+    Boulder(StudentWorld* world, int startX, int startY)
+        : Actor(world, startX, startY, down, true, IID_BOULDER, 1.0, 1)
+        , m_state(STATE_STABLE), m_waitTicks(0)
+    {
+        setVisible(true);
+    }
 
 	virtual void move();
 
+    virtual bool canActorsPassThroughMe() const override
+    {
+        return false;
+    }
+
+	bool isIceBelow();
+
+	bool canFallTo(int x, int y) const;
 };
 
 class Squirt : public Actor
@@ -218,9 +234,41 @@ public:
 	Squirt(StudentWorld* world, int startX, int startY, Direction startDir)
 		: Actor(world, startX, startY, startDir, true, IID_WATER_SPURT, 1.0, 1)
 		, m_travelDis(4)
-	{	}
+	{
+		setVisible(true);
+	}
 
 	virtual void move();
+
+};
+
+
+class Protestor : public Agent
+{
+private: 
+	bool m_mustLeaveField;
+	int m_numOfTicks;
+	unsigned int m_score;
+public:
+	Protestor(StudentWorld* world, int startX, int startY)
+		: Agent(world, startX, startY, left, IID_PROTESTER, 9)
+		, m_mustLeaveField(false), m_score(0)
+	{
+		setVisible(true);
+		//m_numOfTicks = fmax(0, 3 - getWorld()->getLevel() / 4);
+		m_numOfTicks = 8;
+	}
+
+	virtual void move() {};
+	virtual bool annoy(unsigned int amount) {
+		return false;
+	}
+	virtual void addGold() {};
+	//virtual bool huntsIceman() const {};
+
+	//void setMustLeaveOilField();
+
+	//void setTicksToNextMove();
 
 };
 

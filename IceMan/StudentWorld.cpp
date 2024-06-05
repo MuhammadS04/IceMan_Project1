@@ -13,9 +13,6 @@ GameWorld* createStudentWorld(string assetDir)
 
 int StudentWorld::init()
 {
-
-
-
 	m_iceman = new Iceman(this, 30, 60);
 
     for (int x = 0; x <= 64; x++) {                              
@@ -32,25 +29,88 @@ int StudentWorld::init()
         }
     }
 
+    int B = std::min((int)getLevel() / 2 + 2, 9); /// boulder
+
+   // unsigned int target_num_protester = std::min(15, int(2 + getLevel() * 1.5)); /// protester
+
+    createBoulders(B);
+
+    Protestor* n1 = new Protestor(this, 60, 60);
+    Protestor* n2 = new Protestor(this, 60, 10);
+    Protestor* n3 = new Protestor(this, 10, 10);
+
+    m_protestors.emplace_back(n2);
+    m_protestors.emplace_back(n1);
+    m_protestors.emplace_back(n3);
+
 
 	return GWSTATUS_CONTINUE_GAME;
 }
 
+vector<Protestor*> StudentWorld::getProtestors()
+{
+    return m_protestors;
+}
+
+void StudentWorld::createBoulders(int numBoulders)
+{
+    for (int i = 0; i < numBoulders; ++i)
+    {
+        int x, y;
+
+        //// Generate a random position for the boulder
+        //// Ensure the boulder is not placed out of bounds or overlapping with important objects
+        //do
+        //{
+        //    x = rand() % 61; // Random x position between 0 and 60
+        //    y = rand() % 37 + 20; // Random y position between 20 and 56
+        //} while (isIceAt(x, y) || isBoulderAt(x, y)); // Add your own conditions for valid positions
+
+        x = rand() % 61; // Random x position between 0 and 60
+        y = rand() % 37 + 20; // Random y position between 20 and 56
+
+        // Clear ice in a 4x4 region around the boulder's starting position
+        //clearIce(x, y);
+
+        // Create a new Boulder object and add it to the vector of actors
+        Boulder* newBoulder = new Boulder(this ,x ,y);
+        m_actors.push_back(newBoulder);
+    }
+}
+
 int StudentWorld::move()
 {
-	m_iceman->move();
 
+    // update the game status text
     updateDisplayText();
-	//// This code is here merely to allow the game to build, run, and terminate after you hit enter a few times.
-	//// Notice that the return value GWSTATUS_PLAYER_DIED will cause our framework to end the current level.
-	//decLives();
-    if (!m_iceman->isAlive())
+
+    //// give each Actor a chance to do something
+    //m_iceman->move();
+ 
+    //if (!m_iceman->isAlive())
+    //{
+    //    return GWSTATUS_PLAYER_DIED;
+    //}
+    //return GWSTATUS_CONTINUE_GAME;
+
+    if (m_iceman->isAlive())
     {
-        return GWSTATUS_PLAYER_DIED;
+        m_iceman->move();
+        for (auto* a : m_actors)
+        {
+            a->move();
+            return GWSTATUS_CONTINUE_GAME;
+        }
+        return GWSTATUS_CONTINUE_GAME;
+        if (!m_iceman->isAlive())
+        {
+            return GWSTATUS_PLAYER_DIED;
+        }
     }
-    return GWSTATUS_CONTINUE_GAME;
 
 }
+
+
 
 void StudentWorld::clearIce(int x, int y, int dir) 
 {
@@ -185,18 +245,25 @@ bool StudentWorld::isNearIceman(Actor* a, int radius) const
     return false;
 }
 
-bool StudentWorld::checkRadius(int x, int y, double radius) const
+//bool StudentWorld::checkRadius(int x, int y, double radius) const
+//{
+//    for (Actor* a : m_actors) {
+//        int actor_x = a->getX();
+//        int actor_y = a->getY();
+//        double distance = sqrt(intPow(actor_x - x) + intPow(actor_y - y));
+//        if (distance > radius)
+//            continue;
+//        else
+//            return true;
+//    }
+//    return false;
+//}
+
+bool StudentWorld::checkRadius(int x1, int y1, int x2, int y2, double radius) const
 {
-    for (Actor* a : m_actors) {
-        int actor_x = a->getX();
-        int actor_y = a->getY();
-        double distance = sqrt(intPow(actor_x - x) + intPow(actor_y - y));
-        if (distance > radius)
-            continue;
-        else
-            return true;
-    }
-    return false;
+    double dx = x1 - x2;
+    double dy = y1 - y2;
+    return (dx * dx + dy * dy) <= (radius * radius);
 }
 
 int StudentWorld::intPow(int x) const
@@ -204,32 +271,75 @@ int StudentWorld::intPow(int x) const
     return x * x;
 }
 
-bool StudentWorld::checkIce(int x, int y, GraphObject::Direction dir)
-{
-    if (m_iceField[x][y] != nullptr) return true;
-    for (int i = 0; i < 3; i++) {
-        switch (dir)
-        {
-        case GraphObject::up:
-            if (m_iceField[x + i][y] != nullptr) return true;
-            break;
-        case GraphObject::down:
-            if (m_iceField[x + i][y] != nullptr) return true;
-            break;
-        case GraphObject::left:
-            if (m_iceField[x][y + i] != nullptr) return true;
-            break;
-        case GraphObject::right:
-            if (m_iceField[x][y + i] != nullptr) return true;
-            break;
-        }
+//bool StudentWorld::checkIce(int x, int y, GraphObject::Direction dir)
+//{
+//    if (m_iceField[x][y] != nullptr) return true;
+//    for (int i = 0; i < 3; i++) {
+//        switch (dir)
+//        {
+//        case GraphObject::up:
+//            if (m_iceField[x + i][y] != nullptr) return true;
+//            break;
+//        case GraphObject::down:
+//            if (m_iceField[x + i][y] != nullptr) return true;
+//            break;
+//        case GraphObject::left:
+//            if (m_iceField[x][y + i] != nullptr) return true;
+//            break;
+//        case GraphObject::right:
+//            if (m_iceField[x][y + i] != nullptr) return true;
+//            break;
+//        }
+//    }
+//    return false;
+//}
+
+bool StudentWorld::checkIce(int x, int y) {
+    if (x < 0 || x >= VIEW_WIDTH || y < 0 || y >= VIEW_HEIGHT) {
+        return false; // Out of bounds check
     }
-    return false;
+    return m_iceField[x][y] != nullptr;
 }
+
 
 bool StudentWorld::checkIceBoulder(int x, int y, GraphObject::Direction dir)
 {
-    if (!checkIce(x, y, dir) && canActorMoveTo(m_iceman, x, y))
+    if (!checkIce(x, y) && canActorMoveTo(m_iceman, x, y))
         return true;
     return false;
 }
+
+void StudentWorld::squirtWater(int x, int y, GraphObject::Direction dir) {
+    playSound(SOUND_PLAYER_SQUIRT);
+    m_iceman->addWater(-1); // Decrease water count
+
+    switch (dir) {
+    case Actor::up:
+        if (!checkIceBoulder(x, y + 4, dir)) {
+            addActor(new Squirt(this, x, y + 4, dir));
+        }
+        break;
+    case Actor::down:
+        if (!checkIceBoulder(x, y - 4, dir)) {
+            addActor(new Squirt(this, x, y - 4, dir));
+        }
+        break;
+    case Actor::right:
+        if (!checkIceBoulder(x + 4, y, dir)) {
+            addActor(new Squirt(this, x + 4, y, dir));
+        }
+        break;
+    case Actor::left:
+        if (!checkIceBoulder(x - 4, y, dir)) {
+            addActor(new Squirt(this, x - 4, y, dir));
+        }
+        break;
+    default:
+        break;
+    }
+}
+//
+//bool StudentWorld::checkCollisionWithBoulder(Actor* a)
+//{
+//
+//}

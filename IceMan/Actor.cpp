@@ -37,16 +37,16 @@ void Iceman::move()
                 int squirtY = getY();
                 switch (getDirection()) {
                 case up:
-                    squirtY += 4;
+                    squirtY += 1;
                     break;
                 case down:
-                    squirtY -= 4;
+                    squirtY -= 1;
                     break;
                 case left:
-                    squirtX -= 4;
+                    squirtX -= 1;
                     break;
                 case right:
-                    squirtX += 4;
+                    squirtX += 1;
                     break;
                 }
                 if (getWorld()->canActorMoveTo(this, squirtX, squirtY)) {
@@ -103,52 +103,141 @@ bool Iceman::annoy(int amount)
 
 
 //Boulder-------------------------------------------------------------
+void Boulder::move()
+{
+    if (!isAlive()) return;
+
+    if (m_state == STATE_STABLE)
+    {
+        if (!isIceBelow())
+        {
+            m_state = STATE_WAITING;
+            m_waitTicks = 30;
+        }
+    }
+    else if (m_state == STATE_WAITING)
+    {
+        if (m_waitTicks > 0)
+        {
+            m_waitTicks--;
+        }
+        else
+        {
+            m_state = STATE_FALLING;
+            getWorld()->playSound(SOUND_FALLING_ROCK);
+        }
+
+    }
+    else if (m_state == STATE_FALLING)
+    {
+        //Doing check ice only for now, need to add check for other boulders too
+        if (!isIceBelow())
+        {
+            moveTo(getX(), getY() - 1);
+           // getWorld()->boulderProtestor(int x, int y);
+            //^ this function should check if there is a protestor at that location and
+            // annoy(100) if there is.
+        }
+        else
+        {
+            setDead();
+        }
+
+       /* if (canFallTo(getX(), getY() - 1))
+        {
+            moveTo(getX(), getY() - 1);
+            getWorld()->checkr(this);
+        }
+        else
+        {
+            setDead();
+        }*/
+    }
+}
+
+
+bool Boulder::isIceBelow()
+{
+    int x = getX();
+    int y = getY() - 1;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        if (getWorld()->checkIce(x + i, y))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+//bool Boulder::canFallTo(int x, int y) const
+//{
+//    if (y < 0 || getWorld()->checkIce(x, y)
+//    {
+//        return false;
+//    }
+//    return true;
+//}
+
+
 
 //SQUIRT----------------------------------------------------------------
 void Squirt::move()
 {
-        if (!isAlive()) return;
+    if (!isAlive()) return;
 
-        // Check if Squirt annoys any nearby actors
-        if (getWorld()->annoyAllNearbyActors(this, 2, 3)) {
+    //Check if it hit protestors
+    for (auto* protestor : getWorld()->getProtestors())
+    {
+        if (!protestor->isAlive() == false &&
+            getWorld()->checkRadius(getX(), getY(), protestor->getX(), protestor->getY(), 3))
+        {
+            protestor->annoy(2);
             setDead();
             return;
         }
 
-        // Check if Squirt has traveled its full distance
-        if (m_travelDis == 0) {
+        int nextX = getX();
+        int nextY = getY();
+
+        switch (getDirection())
+        {
+        case left:  nextX--; break;
+        case right: nextX++; break;
+        case up:    nextY++; break;
+        case down:  nextY--; break;
+        default:    break;
+        }
+
+        //check if it hit ice or boulders
+        if (getWorld()->checkIceBoulder(nextX, nextY, this->getDirection()))
+        {
             setDead();
             return;
         }
 
-        // Determine the next position based on the current direction
-        int newX = getX();
-        int newY = getY();
-        switch (getDirection()) {
-        case up:
-            newY += 1;
-            break;
-        case down:
-            newY -= 1;
-            break;
-        case left:
-            newX -= 1;
-            break;
-        case right:
-            newX += 1;
-            break;
-        default:
-            break;
+        //int nextX = getX();
+        //int nextY = getY();
+
+        //switch (getDirection())
+        //{
+        //case left:  nextX--; break;
+        //case right: nextX++; break;
+        //case up:    nextY++; break;
+        //case down:  nextY--; break;
+        //default:    break;
+        //}
+
+        if (m_travelDis == 0)
+        {
+            setDead();
+            return;
         }
 
-        // Check if the Squirt can move to the new position
-        if (!getWorld()->canActorMoveTo(this, newX, newY)) {
-            setDead();
-        }
-        else {
-            moveTo(newX, newY);
-            m_travelDis--;
-        }
+        moveTo(nextX, nextY);
+        m_travelDis--;
+    }
 }
 
 
