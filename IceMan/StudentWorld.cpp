@@ -58,19 +58,19 @@ void StudentWorld::createBoulders(int numBoulders)
     {
         int x, y;
 
-        //// Generate a random position for the boulder
-        //// Ensure the boulder is not placed out of bounds or overlapping with important objects
-        //do
-        //{
-        //    x = rand() % 61; // Random x position between 0 and 60
-        //    y = rand() % 37 + 20; // Random y position between 20 and 56
-        //} while (isIceAt(x, y) || isBoulderAt(x, y)); // Add your own conditions for valid positions
+        // Generate a random position for the boulder
+        // Ensure the boulder is not placed out of bounds or overlapping with important objects
+        do
+        {
+            x = rand() % 61; // Random x position between 0 and 60
+            y = rand() % 37 + 20; // Random y position between 20 and 56
+        } while (checkIce(x, y)); // Add your own conditions for valid positions
 
-        x = rand() % 61; // Random x position between 0 and 60
-        y = rand() % 37 + 20; // Random y position between 20 and 56
+        //x = rand() % 61; // Random x position between 0 and 60
+        //y = rand() % 37 + 20; // Random y position between 20 and 56
 
         // Clear ice in a 4x4 region around the boulder's starting position
-        //clearIce(x, y);
+        clearIce(x, y, KEY_PRESS_DOWN);
 
         // Create a new Boulder object and add it to the vector of actors
         Boulder* newBoulder = new Boulder(this ,x ,y);
@@ -119,25 +119,25 @@ void StudentWorld::clearIce(int x, int y, int dir)
     int endX = x + 4;
     int endY = y + 4;
 
-    // Adjust the area to clear based on the direction
-    switch (dir) {
-    case KEY_PRESS_LEFT:
-        startX = x - 1;
-        endX = x + 3;
-        break;
-    case KEY_PRESS_RIGHT:
-        startX = x;
-        endX = x + 4;
-        break;
-    case KEY_PRESS_UP:
-        startY = y;
-        endY = y + 4;
-        break;
-    case KEY_PRESS_DOWN:
-        startY = y - 1;
-        endY = y + 3;
-        break;
-    }
+    //// Adjust the area to clear based on the direction
+    //switch (dir) {
+    //case KEY_PRESS_LEFT:
+    //    startX = x - 1;
+    //    endX = x + 3;
+    //    break;
+    //case KEY_PRESS_RIGHT:
+    //    startX = x;
+    //    endX = x + 4;
+    //    break;
+    //case KEY_PRESS_UP:
+    //    startY = y;
+    //    endY = y + 4;
+    //    break;
+    //case KEY_PRESS_DOWN:
+    //    startY = y - 1;
+    //    endY = y + 3;
+    //    break;
+    //}
 
     for (int i = startX; i < endX; i++) {
         for (int j = startY; j < endY; j++) {
