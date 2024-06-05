@@ -36,6 +36,7 @@ public:
 	void setDead()
 	{
 		m_isAlive = false;
+		setVisible(false);
 	}
 
 	// Move this actor to x,y if possible, and return true; otherwise,
@@ -43,20 +44,27 @@ public:
 	bool moveToIfPossible(int x, int y)
 	{
 		// Make sure x and y are within the screen
-		if (x < 0 || y < 0 || x >= VIEW_WIDTH - 2|| y >= VIEW_HEIGHT - 3 )
+		if (x < 0 || y < 0 || x >= VIEW_WIDTH - 2 || y >= VIEW_HEIGHT - 3)
 		{
 			return false;
 		}
 
-		// Make sure it's not blocked
-		// if (getWorld()->isBlocked(x, y))
-		//     return false;
+		////make sure its not blocked
+		//if (getWorld()->isBlocked(x, y))
+		//    return false;
+
 
 		GraphObject::moveTo(x, y);
 		return true;
+
+		//delete this
+		//if (getWorld()->canActorMoveTo(this, x, y))
+		//{
+		//	moveTo(x, y);
+		//	return true;
+		//}
+		//return false;
 	}
-
-
 	virtual bool annoy(unsigned int amt)
 	{
 		return true;
@@ -106,7 +114,7 @@ public:
 	}
 
 	// Pick up a gold nugget.
-	//virtual void addGold() = 0;
+	virtual void addGold() = 0;
 
 	// How many hit points does this actor have left?
 	unsigned int getHitPoints() const
@@ -126,14 +134,51 @@ public:
 class Iceman : public Agent
 {
 private:
+	unsigned int m_gold;
+	unsigned int m_water;
+	unsigned int m_sonar;
 
 public:
 	Iceman(StudentWorld* world, int startX, int startY)
-		:Agent(world, startX, startY, right, IID_PLAYER, 10)
-	{}
+		:Agent(world, startX, startY, right, IID_PLAYER, 10), m_gold(0), m_sonar(1), m_water(5)
+	{
+		setVisible(true);
+	}
 
 	virtual void move();
 
+	virtual bool annoy(int amount);
+
+	void addGold()
+	{
+		m_gold++;
+	}
+	void addSonar()
+	{
+		m_sonar++;
+	}
+	void addWater()
+	{
+		m_water += 5;
+	}
+
+	unsigned int getGold()
+	{
+		return m_gold;
+	}
+
+	unsigned int getSonar() const {
+		return m_sonar;
+	}
+
+	unsigned int getWater() const {
+		return m_water;
+	}
+
+	virtual bool canDigThroughIce()
+	{
+		return true;
+	}
 };
 
 
@@ -164,5 +209,42 @@ public:
 	virtual void move();
 
 };
+
+class Squirt : public Actor
+{
+private:
+	unsigned int m_travelDis;
+public:
+	Squirt(StudentWorld* world, int startX, int startY, Direction startDir)
+		: Actor(world, startX, startY, startDir, true, IID_WATER_SPURT, 1.0, 1)
+		, m_travelDis(4)
+	{	}
+
+	virtual void move();
+
+};
+
+class Protestor : public Actor {
+private:
+	int m_ticksToWait;
+	bool m_leavingOilField;
+	int m_shoutTicks;
+	int m_ticksToTurn;
+	int m_numSquaresToMoveInCurrentDirection;
+	bool m_hasPickedUpGold;
+	int m_waitingTicks;
+
+public:
+	Protestor(StudentWorld* world, int imageID = IID_PROTESTER)
+		: Actor(world, 60, 60, left, true, imageID, 1.0, 0),
+		m_ticksToWait(0), m_leavingOilField(false),
+		m_shoutTicks(0), m_ticksToTurn(0),
+		m_numSquaresToMoveInCurrentDirection(0),
+		m_hasPickedUpGold(false), m_waitingTicks(0) {}
+
+	virtual void move();
+
+};
+
 
 #endif // ACTOR_H_
