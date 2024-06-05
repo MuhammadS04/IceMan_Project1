@@ -14,10 +14,11 @@ private:
 	StudentWorld* world;
 	bool m_isAlive;
 public:
-	Actor(StudentWorld* world, int imageID, int startX, int startY, bool isAlive, Direction startDir, double size, int depth)
-		:GraphObject(imageID, startX, startY, startDir, size, depth), world(world), m_isAlive(isAlive)
+	Actor(StudentWorld* world, int startX, int startY, Direction startDir,
+		bool visible, int imageID, double size, int depth)
+		: GraphObject(imageID, startX, startY, startDir, size, depth), m_isAlive(true), world(world)
 	{
-		setVisible(true);
+		setVisible(visible);
 	}
 	
 	bool isAlive()
@@ -54,28 +55,102 @@ public:
 
 		GraphObject::moveTo(x, y);
 		return true;
+
+		//delete this
+		//if (getWorld()->canActorMoveTo(this, x, y))
+		//{
+		//	moveTo(x, y);
+		//	return true;
+		//}
+		//return false;
 	}
 
+	virtual bool annoy(unsigned int amt)
+	{
+		return true;
+	}
+
+	// Can other actors pass through this actor?
+	virtual bool canActorsPassThroughMe() const
+	{
+		return true;
+	}
+
+	// Can this actor dig through Ice?
+	virtual bool canDigThroughIce() const
+	{
+		return false;
+	}
+
+	// Can this actor pick items up?
+	virtual bool canPickThingsUp() const
+	{
+		return false;
+	}
+
+	// Does this actor hunt the IceMan?
+	virtual bool huntsIceMan() const
+	{
+		return false;
+	}
+
+	// Can this actor need to be picked up to finish the level?
+	virtual bool needsToBePickedUpToFinishLevel() const
+	{
+		return false;
+	}
 };
 
-class Iceman : public Actor
+class Agent : public Actor
 {
+private: 
+	unsigned int m_hitPoints;
 public:
-	Iceman(int startX, int startY, StudentWorld* world) : 
-		Actor(world, IID_PLAYER, startX, startY, true, right, 4, 2)
+	Agent(StudentWorld* world, int startX, int startY, Direction startDir,
+		int imageID, unsigned int hitPoints)
+		: Actor(world, startX, startY, startDir, true, imageID, 1.0, 0), m_hitPoints(hitPoints)
 	{
-		setVisible(true);
+
 	}
+
+	// Pick up a gold nugget.
+	//virtual void addGold() = 0;
+
+	// How many hit points does this actor have left?
+	unsigned int getHitPoints() const
+	{
+		return m_hitPoints;
+	}
+
+	virtual bool annoy(unsigned int amount);
+
+
+	virtual bool canPickThingsUp() const
+	{
+		return true;
+	}
+};
+
+class Iceman : public Agent
+{
+private:
+
+public:
+	Iceman(StudentWorld* world, int startX, int startY)
+		:Agent(world, startX, startY, right, IID_PLAYER, 10)
+	{}
 
 	virtual void move();
 
 };
 
+
+
 class Ice : public Actor
 {
 public:
-    Ice(int startX, int startY, StudentWorld* world)
-        : Actor(world, IID_ICE, startX, startY, true, right, .25, 3)
+    Ice(StudentWorld* world, int startX, int startY)
+        : Actor(world, startX, startY, right, true, IID_ICE, .25, 3)
     {
         setVisible(true);
     }
@@ -83,5 +158,19 @@ public:
 	virtual void move() {};
 };
 
+class Boulder : public Actor
+{
+private: 
+	unsigned int m_state;
+	unsigned int m_numTicks;
+public:
+	Boulder(StudentWorld* world, int startX, int startY)
+		: Actor(world, startX, startY, down, true, IID_BOULDER, 1.0, 1)
+		, m_state(1), m_numTicks(0)
+	{}
+
+	virtual void move();
+
+};
 
 #endif // ACTOR_H_

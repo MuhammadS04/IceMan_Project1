@@ -1,6 +1,23 @@
 #include "Actor.h"
 #include "StudentWorld.h"
 
+
+bool Agent::annoy(unsigned int amount)
+{
+	if (m_hitPoints <= amount)
+	{
+		m_hitPoints = 0;
+		setDead();
+		return true;
+	}
+	else
+	{
+		m_hitPoints -= amount;
+		return false;
+	}
+}
+
+//ICEMAN__________________________________________________________
 void Iceman::move()
 {
 	if (!isAlive()) return;
@@ -17,5 +34,8 @@ void Iceman::move()
 			break;
 		}
 }
+
+//Boulder-------------------------------------------------------------
+
 
 // Students:  Add code to this file (if you wish), Actor.h, StudentWorld.h, and StudentWorld.cpp

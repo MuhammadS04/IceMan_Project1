@@ -14,7 +14,10 @@ class StudentWorld : public GameWorld
 {
 private:
 	Iceman* m_iceman;
-	Ice* iceField[64][64];
+	Ice* m_iceField[64][64];
+	vector<Actor*> actors;
+	//vector<Protestor> protestors;
+
 public:
 	StudentWorld(std::string assetDir)
 		: GameWorld(assetDir){}
