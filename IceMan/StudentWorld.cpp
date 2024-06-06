@@ -333,6 +333,13 @@ void StudentWorld::squirtWater(int x, int y, GraphObject::Direction dir) {
     }
 }
 
+void StudentWorld::getIcemanPosition(int& x, int& y) const {
+    if (m_iceman != nullptr) {
+        x = m_iceman->getX();
+        y = m_iceman->getY();
+    }
+}
+
 
 
 
