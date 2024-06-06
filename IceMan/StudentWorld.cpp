@@ -241,7 +241,7 @@ bool StudentWorld::isIceAt(int x, int y) const {
     return m_iceField[x][y] != nullptr;
 }
 
-//==================================CHANGED===================================================
+//========================================CHANGED=============================================
 
 bool StudentWorld::isBoulderAt(int x, int y, double radius) const {
     for (const auto& actor : m_actors) {
@@ -268,3 +268,8 @@ bool StudentWorld::isNearIceman(int x, int y, double radius) const {
 }
 
 //============================================================================================
+
+
+double StudentWorld::calculateDistance(int x1, int y1, int x2, int y2) {
+    return sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
+}
