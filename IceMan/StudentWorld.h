@@ -61,6 +61,9 @@ public:
 
 	void createBoulders(int numBoulders);
 
+	void getIcemanPosition(int& x, int& y) const;
+
+	
 	vector<Protestor*> getProtestors();
 
 	// If the IceMan is within radius of a, return a pointer to the
