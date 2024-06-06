@@ -17,8 +17,6 @@ bool Agent::annoy(unsigned int amount)
     }
 }
 
-
-
 //ICEMAN__________________________________________________________
 void Iceman::move()
 {
@@ -35,11 +33,28 @@ void Iceman::move()
 
         case KEY_PRESS_SPACE:
             if (getWater() > 0) {
-                // more stuff
-                Squirt* s = new Squirt(getWorld(), getX(), getY(), getDirection());
-                getWorld()->addActor(s);
-                getWorld()->playSound(SOUND_PLAYER_SQUIRT);
-                m_water--;
+                int squirtX = getX();
+                int squirtY = getY();
+                switch (getDirection()) {
+                case up:
+                    squirtY += 1;
+                    break;
+                case down:
+                    squirtY -= 1;
+                    break;
+                case left:
+                    squirtX -= 1;
+                    break;
+                case right:
+                    squirtX += 1;
+                    break;
+                }
+                if (getWorld()->canActorMoveTo(this, squirtX, squirtY)) {
+                    Squirt* s = new Squirt(getWorld(), squirtX, squirtY, getDirection());
+                    getWorld()->addActor(s);
+                    getWorld()->playSound(SOUND_PLAYER_SQUIRT);
+                    m_water--;
+                }
             }
             break;
         case KEY_PRESS_DOWN:
@@ -88,70 +103,184 @@ bool Iceman::annoy(int amount)
 
 
 //Boulder-------------------------------------------------------------
+void Boulder::move()
+{
+    if (!isAlive()) return;
+
+    if (m_state == STATE_STABLE)
+    {
+        if (!isIceBelow())
+        {
+            m_state = STATE_WAITING;
+            m_waitTicks = 30;
+        }
+    }
+    else if (m_state == STATE_WAITING)
+    {
+        if (m_waitTicks > 0)
+        {
+            m_waitTicks--;
+        }
+        else
+        {
+            m_state = STATE_FALLING;
+            getWorld()->playSound(SOUND_FALLING_ROCK);
+        }
+
+    }
+    else if (m_state == STATE_FALLING)
+    {
+        //Doing check ice only for now, need to add check for other boulders too
+        if (!isIceBelow())
+        {
+            moveTo(getX(), getY() - 1);
+            // getWorld()->boulderProtestor(int x, int y);
+             //^ this function should check if there is a protestor at that location and
+             // annoy(100) if there is.
+        }
+        else
+        {
+            setDead();
+        }
+
+        /* if (canFallTo(getX(), getY() - 1))
+         {
+             moveTo(getX(), getY() - 1);
+             getWorld()->checkr(this);
+         }
+         else
+         {
+             setDead();
+         }*/
+    }
+}
+
+
+bool Boulder::isIceBelow()
+{
+    int x = getX();
+    int y = getY() - 1;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        if (getWorld()->checkIce(x + i, y))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+//bool Boulder::canFallTo(int x, int y) const
+//{
+//    if (y < 0 || getWorld()->checkIce(x, y)
+//    {
+//        return false;
+//    }
+//    return true;
+//}
+
+
 
 //SQUIRT----------------------------------------------------------------
 void Squirt::move()
 {
-    if (!isAlive()) {
-        return;
-    }
+    if (!isAlive()) return;
 
-    // Check if Squirt annoys any nearby actors
-    if (getWorld()->annoyAllNearbyActors(this, 2, 3)) {
-        setDead();
-        return;
-    }
-
-    // Check if Squirt has traveled its full distance
-    if (m_travelDis == 0) {
-        setDead();
-        return;
-    }
-
-    // Check if Squirt can move one square in the current direction
-    switch (getDirection()) {
-    case up:
-        if (!moveToIfPossible(getX(), getY() + 1)) {
+    //Check if it hit protestors
+    for (auto* protestor : getWorld()->getProtestors())
+    {
+        if (!protestor->isAlive() == false &&
+            getWorld()->checkRadius(getX(), getY(), protestor->getX(), protestor->getY(), 3))
+        {
+            protestor->annoy(2);
             setDead();
             return;
         }
-        break;
-    case down:
-        if (!moveToIfPossible(getX(), getY() - 1)) {
+
+        int nextX = getX();
+        int nextY = getY();
+
+        switch (getDirection())
+        {
+        case left:  nextX--; break;
+        case right: nextX++; break;
+        case up:    nextY++; break;
+        case down:  nextY--; break;
+        default:    break;
+        }
+
+        //check if it hit ice or boulders
+        if (getWorld()->checkIceBoulder(nextX, nextY, this->getDirection()))
+        {
             setDead();
             return;
         }
-        break;
-    case left:
-        if (!moveToIfPossible(getX() - 1, getY())) {
+
+        //int nextX = getX();
+        //int nextY = getY();
+
+        //switch (getDirection())
+        //{
+        //case left:  nextX--; break;
+        //case right: nextX++; break;
+        //case up:    nextY++; break;
+        //case down:  nextY--; break;
+        //default:    break;
+        //}
+
+        if (m_travelDis == 0)
+        {
             setDead();
             return;
         }
-        break;
-    case right:
-        if (!moveToIfPossible(getX() + 1, getY())) {
-            setDead();
-            return;
-        }
-        break;
-    default:
-        break;
+
+        moveTo(nextX, nextY);
+        m_travelDis--;
     }
-
-    m_travelDis--;
-
-
 }
+
 
 void Protestor::move() {
+    if (!isAlive()) return; // Check if the Protestor is alive
 
-    if (!isAlive()) {
-        return;
-    }
+    // Decrement the ticks to next move
+   m_ticksToNextMove--;
 
+    // If ticks to next move is zero, reset it and move the Protestor
+   // Adjust the delay for the next move
 
-    // Implement the movement logic for the Protestor
+        // Determine available directions
+        vector<GraphObject::Direction> possibleDirections;
+        if (getWorld()->canActorMoveTo(this, getX(), getY() + 1)) possibleDirections.push_back(GraphObject::up);
+        if (getWorld()->canActorMoveTo(this, getX(), getY() - 1)) possibleDirections.push_back(GraphObject::down);
+        if (getWorld()->canActorMoveTo(this, getX() - 1, getY())) possibleDirections.push_back(GraphObject::left);
+        if (getWorld()->canActorMoveTo(this, getX() + 1, getY())) possibleDirections.push_back(GraphObject::right);
+
+        // Choose a random direction
+        if (!possibleDirections.empty()) {
+            int randomIndex = rand() % possibleDirections.size();
+            GraphObject::Direction randomDirection = possibleDirections[randomIndex];
+
+            // Move the Protestor in the chosen direction
+            switch (randomDirection) {
+            case GraphObject::up:
+                moveToIfPossible(getX(), getY() + 1);
+                break;
+            case GraphObject::down:
+                moveToIfPossible(getX(), getY() - 1);
+                break;
+            case GraphObject::left:
+                moveToIfPossible(getX() - 1, getY());
+                break;
+            case GraphObject::right:
+                moveToIfPossible(getX() + 1, getY());
+                break;
+            }
+        }
+    
 }
+
 
 
 
