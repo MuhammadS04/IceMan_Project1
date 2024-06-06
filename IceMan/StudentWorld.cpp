@@ -1,7 +1,10 @@
 #include "StudentWorld.h"
+#include "Actor.h"
+#include "GameConstants.h"
+#include <algorithm>
 #include <string>
 #include <iomanip>
-#include <sstream>
+#include <cmath>
 using namespace std;
 
 GameWorld* createStudentWorld(string assetDir)
@@ -9,344 +12,259 @@ GameWorld* createStudentWorld(string assetDir)
     return new StudentWorld(assetDir);
 }
 
-// Students:  Add code to this file (if you wish), StudentWorld.h, Actor.h and Actor.cpp
+StudentWorld::StudentWorld(std::string assetDir)
+    : GameWorld(assetDir), m_iceman(nullptr) {
+    // Initialize the ice field
+    for (int x = 0; x < 64; x++) {
+        for (int y = 0; y < 64; y++) {
+            m_iceField[x][y] = nullptr;
+        }
+    }
+}
+
+StudentWorld::~StudentWorld() {
+    cleanUp();
+}
 
 int StudentWorld::init()
 {
-    m_iceman = new Iceman(this, 30, 60);
+    m_iceman = new Iceman(this);
 
-    for (int x = 0; x <= 64; x++) {
+    // Initialize Ice objects and add to the ice field array
+    for (int x = 0; x < 64; x++) {
         for (int y = 0; y < 60; y++) {
-            if (x >= 30 && x <= 33 && y >= 4 && y <= 59) {
-                m_iceField[y][x] = nullptr;
-            }
-            else if (x >= 0 && x <= 64 && y >= 60 && y <= 64) {
-                m_iceField[y][x] = nullptr;
-            }
-            else {
-                m_iceField[y][x] = new Ice(this, x, y);
+            if (x < 30 || x > 33 || y < 4) {
+                m_iceField[x][y] = new Ice(x, y, this);
             }
         }
     }
 
-    int B = std::min((int)getLevel() / 2 + 2, 9); /// boulder
-
-    // unsigned int target_num_protester = std::min(15, int(2 + getLevel() * 1.5)); /// protester
-
-    createBoulders(B);
-
-    Protestor* n1 = new Protestor(this, 60, 60);
-   
-
-    m_protestors.emplace_back(n1);
-
-
+    // Add initial Boulders, Gold Nuggets, and other actors
+    addActors();
 
     return GWSTATUS_CONTINUE_GAME;
-}
-
-vector<Protestor*> StudentWorld::getProtestors()
-{
-    return m_protestors;
-}
-
-void StudentWorld::createBoulders(int numBoulders)
-{
-    for (int i = 0; i < numBoulders; ++i)
-    {
-        int x, y;
-
-        // Generate a random position for the boulder
-        // Ensure the boulder is not placed out of bounds or overlapping with important objects
-        do
-        {
-            x = rand() % 61; // Random x position between 0 and 60
-            y = rand() % 37 + 20; // Random y position between 20 and 56
-        } while (checkIce(x, y)); // Add your own conditions for valid positions
-
-        //x = rand() % 61; // Random x position between 0 and 60
-        //y = rand() % 37 + 20; // Random y position between 20 and 56
-
-        // Clear ice in a 4x4 region around the boulder's starting position
-        clearIce(x, y, KEY_PRESS_DOWN);
-
-        // Create a new Boulder object and add it to the vector of actors
-        Boulder* newBoulder = new Boulder(this, x, y);
-        m_actors.push_back(newBoulder);
-    }
 }
 
 int StudentWorld::move() {
-    // Update the game status text
     updateDisplayText();
 
-    // Move the Iceman
-    if (m_iceman->isAlive()) {
-        m_iceman->move();
-    }
-
-    // Move all active Protestors
-    for (auto* protestor : m_protestors) {
-        if (protestor->isAlive()) {
-            protestor->move();
+    m_iceman->doSomething();
+    for (auto actor : m_actors) {
+        if (actor->isAlive()) {
+            actor->doSomething();
         }
     }
 
-    // Handle other game mechanics and actors' movements as needed
+    removeDeadGameObjects();
 
-    // Check if the Iceman is alive
-    if (!m_iceman->isAlive()) {
-        return GWSTATUS_PLAYER_DIED;
-    }
+    if (!m_iceman->isAlive()) return GWSTATUS_PLAYER_DIED;
 
-    // Return the game status
     return GWSTATUS_CONTINUE_GAME;
 }
 
-
-
-
-void StudentWorld::clearIce(int x, int y, int dir)
+void StudentWorld::cleanUp()
 {
-    int startX = x;
-    int startY = y;
-    int endX = x + 4;
-    int endY = y + 4;
+    delete m_iceman;
+    m_iceman = nullptr;
 
-    //// Adjust the area to clear based on the direction
-    //switch (dir) {
-    //case KEY_PRESS_LEFT:
-    //    startX = x - 1;
-    //    endX = x + 3;
-    //    break;
-    //case KEY_PRESS_RIGHT:
-    //    startX = x;
-    //    endX = x + 4;
-    //    break;
-    //case KEY_PRESS_UP:
-    //    startY = y;
-    //    endY = y + 4;
-    //    break;
-    //case KEY_PRESS_DOWN:
-    //    startY = y - 1;
-    //    endY = y + 3;
-    //    break;
-    //}
+    for (auto actor : m_actors) {
+        delete actor;
+    }
+    m_actors.clear();
 
-    for (int i = startX; i < endX; i++) {
-        for (int j = startY; j < endY; j++) {
-            if (i >= 0 && i < 64 && j >= 0 && j < 60 && m_iceField[j][i] != nullptr) {
-                delete m_iceField[j][i];
-                m_iceField[j][i] = nullptr;
-            }
+    // Clean up the ice field
+    for (int x = 0; x < 64; x++) {
+        for (int y = 0; y < 64; y++) {
+            delete m_iceField[x][y];
+            m_iceField[x][y] = nullptr;
         }
     }
 }
+
 
 void StudentWorld::updateDisplayText() {
-    // Get info
-    int level = getLevel();
-    int lives = getLives();
-    int hp = m_iceman->getHitPoints() * 10; // Since IceMan has 10 health, we *10 to keep track of percentage
-    int squirts = m_iceman->getWater();
-    int gold = m_iceman->getGold();
-    int barrelsLeft = getBarrelsLeft();
-    int sonar = m_iceman->getSonar();
-    int score = getScore();
-
-    // Format the info using sstream
-    ostringstream oss;
-    oss << "Lvl: " << setw(2) << setfill(' ') << level << " "
-        << "Lives: " << lives << " "
-        << "Hlth: " << setw(3) << setfill(' ') << hp << "% "
-        << "Wtr: " << setw(2) << setfill(' ') << squirts << " "
-        << "Gld: " << setw(2) << setfill(' ') << gold << " "
-        << "Oil Left: " << setw(2) << setfill(' ') << barrelsLeft << " "
-        << "Sonar: " << setw(2) << setfill(' ') << sonar << " "
-        << "Scr: " << setw(6) << setfill('0') << score;
-
-    // Update the display text
-    setGameStatText(oss.str());
+    // Update game status line
 }
 
-unsigned int StudentWorld::getBarrelsLeft()
-{
-    return m_barrelsLeft;
-}
-
-void StudentWorld::addActor(Actor* a)
-{
-    m_actors.push_back(a);
-}
-
-int StudentWorld::annoyAllNearbyActors(Actor* a, int points, int radius) {
-    int actorsAnnoyed = 0;
-
-    // annoyer coordinates
-    int annoyerX = a->getX();
-    int annoyerY = a->getY();
-
-    // loop through actors
-    for (const auto& actor : m_actors) {
-        // calculate the euclidian distance
-        int distance = sqrt(pow(actor->getX() - annoyerX, 2) + pow(actor->getY() - annoyerY, 2));
-
-        if (distance <= radius) {   // ** MAYBE CHECK IF ACTOR CAN BE ANNOYED HERE **
-            // annoy actor and increase the count
-            actor->annoy(points);
-            actorsAnnoyed++;
+void StudentWorld::removeDeadGameObjects() {
+    m_actors.erase(std::remove_if(m_actors.begin(), m_actors.end(), [](Actor* actor) {
+        if (!actor->isAlive()) {
+            delete actor;
+            return true;
         }
-    }
-    return actorsAnnoyed;
-}
-bool StudentWorld::canActorMoveTo(Actor* a, int x, int y) const
-{
-    // Check boundaries
-    if (x < 0 || x >= 64 || y < 0 || y >= 64) {
         return false;
-    }
-
-    // Check if the location is occupied by Ice
-    for (int i = x; i < x + 4 && i < 64; i++) {
-        for (int j = y; j < y + 4 && j < 60; j++) {
-            if (m_iceField[j][i] != nullptr) {
-                return false;
-            }
-        }
-    }
-
-    // Check if the location is occupied by a Boulder
-    for (const auto& actor : m_actors) {
-        if (dynamic_cast<Boulder*>(actor) != nullptr) {
-            int boulderX = actor->getX();
-            int boulderY = actor->getY();
-            if (x >= boulderX && x < boulderX + 4 && y >= boulderY && y < boulderY + 4) {
-                return false;
-            }
-        }
-    }
-
-    return true;
+        }), m_actors.end());
 }
 
+void StudentWorld::playFinishedLevelSound() {
+    // Play sound when the level is finished
+}
 
-bool StudentWorld::isNearIceman(Actor* a, int radius) const
-{
-    double distance = sqrt(intPow(a->getX() - m_iceman->getX()) + intPow(a->getY() - m_iceman->getY()));
-    if (distance <= radius) {
+void StudentWorld::addActors() {
+    // Add Boulders
+    int B = std::min((int)getLevel() / 2 + 2, 9);
+    for (int i = 0; i < B; i++) {
+        int x = rand() % 60;
+        int y = 20 + rand() % 36;
+        m_actors.push_back(new Boulder(x, y, this));
+    }
+
+    // Add Gold Nuggets
+    int G = std::max(5 - (int)getLevel() / 2, 2);
+    for (int i = 0; i < G; i++) {
+        int x = rand() % 61;
+        int y = rand() % 57;
+        m_actors.push_back(new GoldNugget(x, y, false, this));
+    }
+
+    // Add Regular Protesters
+    int P = std::min(15, int(2 + getLevel() * 1.5));
+    for (int i = 0; i < P; i++) {
+        if (rand() % 100 < (std::min(90, (int)getLevel() * 10 + 30))) {
+            m_actors.push_back(new HardcoreProtester(60, 60, this));
+        }
+        else {
+            m_actors.push_back(new RegularProtester(60, 60, this));
+        }
+    }
+
+    // Add Sonar Kits
+    int S = std::max(1, (int)getLevel() / 2);
+    for (int i = 0; i < S; i++) {
+        int x = rand() % 60;
+        int y = rand() % 60;
+        m_actors.push_back(new SonarKit(x, y, this));
+    }
+
+    // Add Water Pools
+    int W = std::max(1, (int)getLevel() / 2);
+    for (int i = 0; i < W; i++) {
+        int x = rand() % 60;
+        int y = rand() % 60;
+        m_actors.push_back(new WaterPool(x, y, this));
+    }
+
+    // Add Barrels
+    int H = std::min((int)getLevel() / 2 + 2, 9);
+    for (int i = 0; i < B; i++) {
+        int x = rand() % 60;
+        int y = rand() % 56;
+        m_actors.push_back(new Barrel(x, y, this));
+    }
+
+    // Add other actors similarly...
+}
+
+void StudentWorld::addActor(Actor* actor) {
+    m_actors.push_back(actor);
+}
+
+void StudentWorld::revealObjects(int x, int y, int radius) {
+    for (auto actor : m_actors) {
+        int dx = actor->getX() - x;
+        int dy = actor->getY() - y;
+        if (dx * dx + dy * dy <= radius * radius) {
+            actor->setVisible(true);
+        }
+    }
+}
+
+void StudentWorld::increaseScore(int points) {
+    GameWorld::increaseScore(points);
+}
+
+bool StudentWorld::isBlocked(int x, int y) const {
+    for (const auto& actor : m_actors) {
+        if (actor->getX() == x && actor->getY() == y && dynamic_cast<Boulder*>(actor)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool StudentWorld::isIceBelow(int x, int y) const {
+    if (y > 0 && m_iceField[x][y - 1] != nullptr) {
         return true;
     }
     return false;
 }
 
-//bool StudentWorld::checkRadius(int x, int y, double radius) const
-//{
-//    for (Actor* a : m_actors) {
-//        int actor_x = a->getX();
-//        int actor_y = a->getY();
-//        double distance = sqrt(intPow(actor_x - x) + intPow(actor_y - y));
-//        if (distance > radius)
-//            continue;
-//        else
-//            return true;
-//    }
-//    return false;
-//}
-
-bool StudentWorld::checkRadius(int x1, int y1, int x2, int y2, double radius) const
-{
-    double dx = x1 - x2;
-    double dy = y1 - y2;
-    return (dx * dx + dy * dy) <= (radius * radius);
+bool StudentWorld::annoyIcemanOrProtester(Actor* a) {
+    if (m_iceman->getX() == a->getX() && m_iceman->getY() == a->getY()) {
+        m_iceman->setDead();
+        return true;
+    }
+    for (auto& actor : m_actors) {
+        if (actor->getX() == a->getX() && actor->getY() == a->getY() && dynamic_cast<Protester*>(actor)) {
+            dynamic_cast<Protester*>(actor)->getAnnoyed(100);
+            return true;
+        }
+    }
+    return false;
 }
 
-int StudentWorld::intPow(int x) const
-{
-    return x * x;
+bool StudentWorld::annoyProtesterAt(int x, int y, int points) {
+    for (auto& actor : m_actors) {
+        if (actor->getX() == x && actor->getY() == y && dynamic_cast<Protester*>(actor)) {
+            dynamic_cast<Protester*>(actor)->getAnnoyed(points);
+            return true;
+        }
+    }
+    return false;
 }
 
-//bool StudentWorld::checkIce(int x, int y, GraphObject::Direction dir)
-//{
-//    if (m_iceField[x][y] != nullptr) return true;
-//    for (int i = 0; i < 3; i++) {
-//        switch (dir)
-//        {
-//        case GraphObject::up:
-//            if (m_iceField[x + i][y] != nullptr) return true;
-//            break;
-//        case GraphObject::down:
-//            if (m_iceField[x + i][y] != nullptr) return true;
-//            break;
-//        case GraphObject::left:
-//            if (m_iceField[x][y + i] != nullptr) return true;
-//            break;
-//        case GraphObject::right:
-//            if (m_iceField[x][y + i] != nullptr) return true;
-//            break;
-//        }
-//    }
-//    return false;
-//}
+int StudentWorld::getIcemanX() const {
+    return m_iceman->getX();
+}
 
-bool StudentWorld::checkIce(int x, int y) {
-    if (x < 0 || x >= VIEW_WIDTH || y < 0 || y >= VIEW_HEIGHT) {
-        return false; // Out of bounds check
+int StudentWorld::getIcemanY() const {
+    return m_iceman->getY();
+}
+
+bool StudentWorld::removeIce(int x, int y)
+{
+    if (x < 0 || x >= 64 || y < 0 || y >= 60) {
+        return false;
+    }
+    if (m_iceField[x][y] != nullptr) {
+        delete m_iceField[x][y];
+        m_iceField[x][y] = nullptr;
+        return true;
+    }
+    return false;
+}
+
+bool StudentWorld::isIceAt(int x, int y) const {
+    if (x < 0 || x >= 64 || y < 0 || y >= 60) {
+        return false;
     }
     return m_iceField[x][y] != nullptr;
 }
 
+//==================================CHANGED===================================================
 
-bool StudentWorld::checkIceBoulder(int x, int y, GraphObject::Direction dir)
-{
-    if (!checkIce(x, y) && canActorMoveTo(m_iceman, x, y))
-        return true;
+bool StudentWorld::isBoulderAt(int x, int y, double radius) const {
+    for (const auto& actor : m_actors) {
+        if (Boulder* boulder = dynamic_cast<Boulder*>(actor)) {
+            int boulderX = boulder->getX();
+            int boulderY = boulder->getY();
+            double distance = std::sqrt(std::pow(boulderX - x, 2) + std::pow(boulderY - y, 2));
+            if (distance <= radius) {
+                return true;
+            }
+        }
+    }
     return false;
 }
 
-void StudentWorld::squirtWater(int x, int y, GraphObject::Direction dir) {
-    playSound(SOUND_PLAYER_SQUIRT);
-    m_iceman->addWater(-1); // Decrease water count
+bool StudentWorld::isNearIceman(int x, int y, double radius) const {
+    // Calculate the distance between (x, y) and the Iceman's position
+    int icemanX = m_iceman->getX();
+    int icemanY = m_iceman->getY();
+    double distance = sqrt(pow(icemanX - x, 2) + pow(icemanY - y, 2));
 
-    switch (dir) {
-    case Actor::up:
-        if (!checkIceBoulder(x, y + 4, dir)) {
-            addActor(new Squirt(this, x, y + 4, dir));
-        }
-        break;
-    case Actor::down:
-        if (!checkIceBoulder(x, y - 4, dir)) {
-            addActor(new Squirt(this, x, y - 4, dir));
-        }
-        break;
-    case Actor::right:
-        if (!checkIceBoulder(x + 4, y, dir)) {
-            addActor(new Squirt(this, x + 4, y, dir));
-        }
-        break;
-    case Actor::left:
-        if (!checkIceBoulder(x - 4, y, dir)) {
-            addActor(new Squirt(this, x - 4, y, dir));
-        }
-        break;
-    default:
-        break;
-    }
+    // Check if the distance is less than or equal to the specified radius
+    return distance <= radius;
 }
 
-void StudentWorld::getIcemanPosition(int& x, int& y) const {
-    if (m_iceman != nullptr) {
-        x = m_iceman->getX();
-        y = m_iceman->getY();
-    }
-}
-
-
-
-
-
-
-//
-//bool StudentWorld::checkCollisionWithBoulder(Actor* a)
-//{
-//
-//}
+//============================================================================================
