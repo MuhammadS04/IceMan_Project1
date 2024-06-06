@@ -1,81 +1,51 @@
-#ifndef STUDENTWORLD_H_
-#define STUDENTWORLD_H_
+#ifndef STUDENTWORLD_H
+#define STUDENTWORLD_H
 
 #include "GameWorld.h"
-#include "GameConstants.h"
-#include "Actor.h"
-#include <string>
 #include <vector>
-using namespace std;
+#include "Actor.h";
 
-// Students:  Add code to this file, StudentWorld.cpp, Actor.h, and Actor.cpp
-
-class StudentWorld : public GameWorld
-{
-private:
-	Iceman* m_iceman;
-	Ice* m_iceField[64][64];
-	vector<Actor*> m_actors;
-	unsigned int m_barrelsLeft;
-	vector<Protestor*> m_protestors;
-
+class StudentWorld : public GameWorld {
 public:
-	StudentWorld(std::string assetDir)
-		: GameWorld(assetDir) {}
-
-	virtual int init();
-
-	virtual int move();
-
-	virtual void cleanUp()
-	{
-	}
-
-	void clearIce(int x, int y, int dir);
-
-	void updateDisplayText();
-
-	unsigned int getBarrelsLeft();
-
-	int annoyAllNearbyActors(Actor* a, int points, int radius);
-
-	void addActor(Actor* a);
-
-	bool canActorMoveTo(Actor* a, int x, int y) const;
-
-	bool isNearIceman(Actor* a, int radius) const;
-
-	//bool checkRadius(int x, int y, double radius) const;
-
-	bool checkRadius(int x1, int y1, int x2, int y2, double radius) const;
-
-	int intPow(int x) const;
-
-	//bool checkIce(int x, int y, GraphObject::Direction dir);
-
-	bool checkIce(int x, int y);
-
-	bool checkIceBoulder(int x, int y, GraphObject::Direction dir);
-
-	void squirtWater(int x, int y, GraphObject::Direction dir);
-
-	void createBoulders(int numBoulders);
-
-	void getIcemanPosition(int& x, int& y) const;
-
-	
-	vector<Protestor*> getProtestors();
-
-	// If the IceMan is within radius of a, return a pointer to the
-// IceMan, otherwise null.
-	//Actor* findNearbyIceMan(Actor* a, int radius) const;
-
-	// If at least one actor that can pick things up is within radius of a,
-	// return a pointer to one of them, otherwise null.
-	//Actor* findNearbyPickerUpper(Actor* a, int radius) const;
+    StudentWorld(std::string assetDir);
 
 
+    virtual ~StudentWorld();
 
+    virtual int init();
+    virtual int move();
+    virtual void cleanUp();
+
+    void addActor(Actor* actor);
+    void revealObjects(int x, int y, int radius);
+    void increaseScore(int points);
+    bool isBlocked(int x, int y) const;
+    bool isIceBelow(int x, int y) const;
+    bool annoyIcemanOrProtester(Actor* a);
+    bool annoyProtesterAt(int x, int y, int points);
+    int getIcemanX() const;
+    int getIcemanY() const;
+    bool removeIce(int x, int y);
+    bool isIceAt(int x, int y) const;
+
+
+    //==================================CHANGED===================================================
+
+    bool isBoulderAt(int x, int y, double radius) const;
+    bool isNearIceman(int x, int y, double radius) const;
+
+    //============================================================================================
+
+
+private:
+    Iceman* m_iceman;
+    Ice* m_iceField[64][64]; // Ice field array
+    std::vector<Actor*> m_actors;
+
+    void updateDisplayText();
+    void removeDeadGameObjects();
+    void playFinishedLevelSound();
+    void addActors();
 };
 
-#endif // STUDENTWORLD_H_
+#endif // STUDENTWORLD_H
