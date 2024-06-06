@@ -241,6 +241,7 @@ void Squirt::doSomething() {
     }
 }
 
+//============================================CHANGED=====================================================
 // GoldNugget class implementation
 GoldNugget::GoldNugget(int startX, int startY, bool temporary, StudentWorld* world)
     : Actor(IID_GOLD, startX, startY, right, 1.0, 2, world), m_temporary(temporary), m_ticksLeft(100) {}
@@ -258,8 +259,16 @@ void GoldNugget::doSomething() {
             setDead();
         }
     }
+
     // Logic to handle nugget being picked up
+    if (!m_temporary && getWorld()->getIcemanX() == getX() && getWorld()->getIcemanY() == getY()) {
+        setDead(); // Gold picked up, set it as dead
+        getWorld()->increaseScore(10); // Increase score for picking up gold
+        getWorld()->playSound(SOUND_GOT_GOODIE); // Play sound effect
+    }
 }
+//========================================================================================================
+
 
 // Protester class implementation
 Protester::Protester(int imageID, int startX, int startY, StudentWorld* world, int hitPoints)
