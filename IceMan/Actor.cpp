@@ -241,12 +241,21 @@ void Squirt::doSomething() {
     }
 }
 
+
 //============================================CHANGED=====================================================
 // GoldNugget class implementation
 GoldNugget::GoldNugget(int startX, int startY, bool temporary, StudentWorld* world)
-    : Actor(IID_GOLD, startX, startY, right, 1.0, 2, world), m_temporary(temporary), m_ticksLeft(100) {}
+    : Actor(IID_GOLD, startX, startY, right, 1.0, 2, world), m_temporary(temporary), m_ticksLeft(100), m_visible(false) {
+    setVisible(false); // Initially invisible
+}
 
 GoldNugget::~GoldNugget() {}
+
+void GoldNugget::setVisible(bool visible) {
+    m_visible = visible;
+    Actor::setVisible(visible); // Call the base class function to set visibility
+}
+
 
 void GoldNugget::doSomething() {
     if (!isAlive()) return;
@@ -260,14 +269,24 @@ void GoldNugget::doSomething() {
         }
     }
 
+    // Check if the Iceman is within 5 radius distance
+    int icemanX = getWorld()->getIcemanX();
+    int icemanY = getWorld()->getIcemanY();
+    int distance = getWorld()->calculateDistance(getX(), getY(), icemanX, icemanY);
+
+    if (!m_visible && distance <= 5) {
+        setVisible(true); // Make the gold nugget visible
+    }
+
     // Logic to handle nugget being picked up
-    if (!m_temporary && getWorld()->getIcemanX() == getX() && getWorld()->getIcemanY() == getY()) {
+    if (!m_temporary && m_visible && icemanX == getX() && icemanY == getY()) {
         setDead(); // Gold picked up, set it as dead
         getWorld()->increaseScore(10); // Increase score for picking up gold
         getWorld()->playSound(SOUND_GOT_GOODIE); // Play sound effect
     }
 }
 //========================================================================================================
+
 
 
 // Protester class implementation
@@ -479,7 +498,7 @@ void WaterPool::doSomething() {
 }
 
 
-//==================================CHANGED===================================================
+//=====================================================================================
 
 
 
