@@ -1,367 +1,506 @@
 #include "Actor.h"
 #include "StudentWorld.h"
-#include <queue>
+#include "GameConstants.h"
 
+// Actor class implementation
+Actor::Actor(int imageID, int startX, int startY, Direction dir, float size, unsigned int depth, StudentWorld* world)
+    : GraphObject(imageID, startX, startY, dir, size, depth), m_alive(true), m_world(world) {
+    setVisible(true);
+}
 
-bool Agent::annoy(unsigned int amount)
-{
-    if (m_hitPoints <= amount)
-    {
-        m_hitPoints = 0;
-        setDead();
-        return true;
+Actor::~Actor() {}
+
+bool Actor::isAlive() const {
+    return m_alive;
+}
+
+void Actor::setDead() {
+    m_alive = false;
+}
+
+StudentWorld* Actor::getWorld() const {
+    return m_world;
+}
+
+// Ice class implementation
+Ice::Ice(int startX, int startY, StudentWorld* world)
+    : Actor(IID_ICE, startX, startY, right, 0.25, 3, world) {}
+
+Ice::~Ice() {}
+
+void Ice::doSomething() {
+    // Ice does nothing
+}
+
+Iceman::Iceman(StudentWorld* world)
+    : Actor(IID_PLAYER, 30, 60, right, 1.0, 0, world), m_hitPoints(10), m_water(5), m_gold(0), m_sonar(1) {}
+
+Iceman::~Iceman() {}
+
+void Iceman::doSomething() {
+    // 1. Check if the Iceman is alive
+    if (!isAlive()) return;
+
+    // 2. Remove ice in the 4x4 area occupied by the Iceman
+    bool iceRemoved = false;
+    for (int x = getX(); x < getX() + 4; x++) {
+        for (int y = getY(); y < getY() + 4; y++) {
+            if (getWorld()->removeIce(x, y)) {
+                iceRemoved = true;
+            }
+        }
     }
-    else
-    {
-        m_hitPoints -= amount;
+    if (iceRemoved) {
+        getWorld()->playSound(SOUND_DIG);
+    }
+
+    // 3. Check for key presses
+    int ch;
+    if (getWorld()->getKey(ch)) {
+        switch (ch) {
+            // a. Handle escape key
+        case KEY_PRESS_ESCAPE:
+            setDead();
+            getWorld()->playSound(KEY_PRESS_ESCAPE);
+            return;
+
+            // b. Handle space bar to fire squirt
+        case KEY_PRESS_SPACE:
+            if (m_water > 0) {
+                m_water--;
+                int x = getX(), y = getY();
+                Direction dir = getDirection();
+                switch (dir) {
+                case left:
+                    x -= 4;
+                    break;
+                case right:
+                    x += 4;
+                    break;
+                case up:
+                    y += 4;
+                    break;
+                case down:
+                    y -= 4;
+                    break;
+                }
+                if (!getWorld()->isBlocked(x, y) && !getWorld()->isIceAt(x, y) && !getWorld()->isBoulderAt(x, y, 3.0)) {
+                    getWorld()->addActor(new Squirt(x, y, dir, getWorld()));
+                }
+                getWorld()->playSound(SOUND_PLAYER_SQUIRT);
+            }
+            break;
+
+            // c. Handle turning directions
+        case KEY_PRESS_LEFT:
+            if (getDirection() != left) {
+                setDirection(left);
+            }
+            else if (getX() > 0 && !getWorld()->isBlocked(getX() - 1, getY())) {
+                moveTo(getX() - 1, getY());
+            }
+            break;
+        case KEY_PRESS_RIGHT:
+            if (getDirection() != right) {
+                setDirection(right);
+            }
+            else if (getX() < 60 && !getWorld()->isBlocked(getX() + 1, getY())) {
+                moveTo(getX() + 1, getY());
+            }
+            break;
+        case KEY_PRESS_UP:
+            if (getDirection() != up) {
+                setDirection(up);
+            }
+            else if (getY() < 60 && !getWorld()->isBlocked(getX(), getY() + 1)) {
+                moveTo(getX(), getY() + 1);
+            }
+            break;
+        case KEY_PRESS_DOWN:
+            if (getDirection() != down) {
+                setDirection(down);
+            }
+            else if (getY() > 0 && !getWorld()->isBlocked(getX(), getY() - 1)) {
+                moveTo(getX(), getY() - 1);
+            }
+            break;
+
+            // e. Handle sonar charge
+        case 'z':
+        case 'Z':
+            if (m_sonar > 0) {
+                m_sonar--;
+                getWorld()->revealObjects(getX(), getY(), 12);
+            }
+            break;
+
+            // f. Handle dropping gold nugget
+        case KEY_PRESS_TAB:
+            if (m_gold > 0) {
+                m_gold--;
+                getWorld()->addActor(new GoldNugget(getX(), getY(), true, getWorld()));
+            }
+            break;
+
+        default:
+            break;
+        }
+    }
+}
+
+// Boulder class implementation
+Boulder::Boulder(int startX, int startY, StudentWorld* world)
+    : Actor(IID_BOULDER, startX, startY, down, 1.0, 1, world), m_state(STABLE), m_waitingTicks(30) {}
+
+Boulder::~Boulder() {}
+
+void Boulder::doSomething() {
+    if (!isAlive()) return;
+
+    switch (m_state) {
+    case STABLE:
+        if (!getWorld()->isIceBelow(getX(), getY())) {
+            m_state = WAITING;
+        }
+        break;
+    case WAITING:
+        if (m_waitingTicks > 0) {
+            m_waitingTicks--;
+        }
+        else {
+            m_state = FALLING;
+            getWorld()->playSound(SOUND_FALLING_ROCK);
+        }
+        break;
+    case FALLING:
+        if (getY() > 0 && !getWorld()->isBlocked(getX(), getY() - 1)) {
+            moveTo(getX(), getY() - 1);
+            if (getWorld()->annoyIcemanOrProtester(this)) {
+                setDead();
+            }
+        }
+        else {
+            setDead();
+        }
+        break;
+    }
+}
+
+// Squirt class implementation
+Squirt::Squirt(int startX, int startY, Direction dir, StudentWorld* world)
+    : Actor(IID_WATER_SPURT, startX, startY, dir, 1.0, 1, world), m_distanceTraveled(0) {}
+
+Squirt::~Squirt() {}
+
+void Squirt::doSomething() {
+    if (!isAlive()) return;
+
+    if (m_distanceTraveled >= 4) {
+        setDead();
+    }
+    else {
+        int x = getX(), y = getY();
+        switch (getDirection()) {
+        case left:
+            if (!getWorld()->isBlocked(x - 1, y)) {
+                moveTo(x - 1, y);
+            }
+            else {
+                setDead();
+            }
+            break;
+        case right:
+            if (!getWorld()->isBlocked(x + 1, y)) {
+                moveTo(x + 1, y);
+            }
+            else {
+                setDead();
+            }
+            break;
+        case up:
+            if (!getWorld()->isBlocked(x, y + 1)) {
+                moveTo(x, y + 1);
+            }
+            else {
+                setDead();
+            }
+            break;
+        case down:
+            if (!getWorld()->isBlocked(x, y - 1)) {
+                moveTo(x, y - 1);
+            }
+            else {
+                setDead();
+            }
+            break;
+        }
+        m_distanceTraveled++;
+        if (getWorld()->annoyProtesterAt(getX(), getY(), 2)) {
+            setDead();
+        }
+    }
+}
+
+// GoldNugget class implementation
+GoldNugget::GoldNugget(int startX, int startY, bool temporary, StudentWorld* world)
+    : Actor(IID_GOLD, startX, startY, right, 1.0, 2, world), m_temporary(temporary), m_ticksLeft(100) {}
+
+GoldNugget::~GoldNugget() {}
+
+void GoldNugget::doSomething() {
+    if (!isAlive()) return;
+
+    if (m_temporary) {
+        if (m_ticksLeft > 0) {
+            m_ticksLeft--;
+        }
+        else {
+            setDead();
+        }
+    }
+    // Logic to handle nugget being picked up
+}
+
+// Protester class implementation
+Protester::Protester(int imageID, int startX, int startY, StudentWorld* world, int hitPoints)
+    : Actor(imageID, startX, startY, left, 1.0, 0, world), m_hitPoints(hitPoints), m_restingTicks(0), m_shoutCooldown(0), m_numSquaresToMoveInCurrentDirection(0), m_leaveOilField(false) {}
+
+Protester::~Protester() {}
+
+void Protester::getAnnoyed(int points) {
+    m_hitPoints -= points;
+    if (m_hitPoints <= 0) {
+        setDead();
+        m_leaveOilField = true;
+        getWorld()->playSound(SOUND_PROTESTER_GIVE_UP);
+        getWorld()->increaseScore(100);
+    }
+    else {
+        getWorld()->playSound(SOUND_PROTESTER_ANNOYED);
+    }
+}
+
+void Protester::moveToNextPosition() {
+    if (m_leaveOilField) {
+        moveToExit();
+        return;
+    }
+
+    if (m_numSquaresToMoveInCurrentDirection <= 0) {
+        pickNewDirection();
+    }
+    else {
+        Direction dir = getDirection();
+        int x = getX(), y = getY();
+        switch (dir) {
+        case left:
+            if (canMoveInDirection(left)) {
+                moveTo(x - 1, y);
+                m_numSquaresToMoveInCurrentDirection--;
+            }
+            else {
+                m_numSquaresToMoveInCurrentDirection = 0;
+            }
+            break;
+        case right:
+            if (canMoveInDirection(right)) {
+                moveTo(x + 1, y);
+                m_numSquaresToMoveInCurrentDirection--;
+            }
+            else {
+                m_numSquaresToMoveInCurrentDirection = 0;
+            }
+            break;
+        case up:
+            if (canMoveInDirection(up)) {
+                moveTo(x, y + 1);
+                m_numSquaresToMoveInCurrentDirection--;
+            }
+            else {
+                m_numSquaresToMoveInCurrentDirection = 0;
+            }
+            break;
+        case down:
+            if (canMoveInDirection(down)) {
+                moveTo(x, y - 1);
+                m_numSquaresToMoveInCurrentDirection--;
+            }
+            else {
+                m_numSquaresToMoveInCurrentDirection = 0;
+            }
+            break;
+        }
+    }
+}
+
+void Protester::setRestingTicks(int ticks) {
+    m_restingTicks = ticks;
+}
+
+bool Protester::isResting() const {
+    return m_restingTicks > 0;
+}
+
+void Protester::shoutIfCloseToIceman() {
+    if (m_shoutCooldown > 0) {
+        m_shoutCooldown--;
+        return;
+    }
+
+    // Logic to check if Iceman is within 4 units and in the same direction
+    // If so, shout and reset shout cooldown
+    int icemanX = getWorld()->getIcemanX();
+    int icemanY = getWorld()->getIcemanY();
+    int x = getX(), y = getY();
+    if ((getDirection() == left && x - icemanX <= 4 && y == icemanY) ||
+        (getDirection() == right && icemanX - x <= 4 && y == icemanY) ||
+        (getDirection() == up && icemanY - y <= 4 && x == icemanX) ||
+        (getDirection() == down && y - icemanY <= 4 && x == icemanX)) {
+        getWorld()->playSound(SOUND_PROTESTER_YELL);
+        m_shoutCooldown = 15;
+    }
+}
+
+bool Protester::canMoveInDirection(Direction dir) const {
+    int x = getX(), y = getY();
+    switch (dir) {
+    case left:
+        return x > 0 && !getWorld()->isBlocked(x - 1, y);
+    case right:
+        return x < 60 && !getWorld()->isBlocked(x + 1, y);
+    case up:
+        return y < 60 && !getWorld()->isBlocked(x, y + 1);
+    case down:
+        return y > 0 && !getWorld()->isBlocked(x, y - 1);
+    default:
         return false;
     }
 }
 
-//ICEMAN__________________________________________________________
-void Iceman::move()
-{
-    if (!isAlive()) return;
-
-
-    int ch;
-    if (getWorld()->getKey(ch))
-        switch (ch)
-        {
-        case KEY_PRESS_ESCAPE:
-            annoy(100);
-            break;
-
-        case KEY_PRESS_SPACE:
-            if (getWater() > 0) {
-                int squirtX = getX();
-                int squirtY = getY();
-                switch (getDirection()) {
-                case up:
-                    squirtY += 1;
-                    break;
-                case down:
-                    squirtY -= 1;
-                    break;
-                case left:
-                    squirtX -= 1;
-                    break;
-                case right:
-                    squirtX += 1;
-                    break;
-                }
-                if (getWorld()->canActorMoveTo(this, squirtX, squirtY)) {
-                    Squirt* s = new Squirt(getWorld(), squirtX, squirtY, getDirection());
-                    getWorld()->addActor(s);
-                    getWorld()->playSound(SOUND_PLAYER_SQUIRT);
-                    m_water--;
-                }
-            }
-            break;
-        case KEY_PRESS_DOWN:
-            if (getDirection() == down)
-                moveToIfPossible(getX(), getY() - 1);
-            else
-                setDirection(down);
-            break;
-        case KEY_PRESS_LEFT:
-            if (getDirection() == left)
-                moveToIfPossible(getX() - 1, getY());
-            else
-                setDirection(left);
-            break;
-        case KEY_PRESS_RIGHT:
-            if (getDirection() == right)
-            {
-                moveToIfPossible(getX() + 1, getY());
-            }
-            else
-                setDirection(right);
-            break;
-        case KEY_PRESS_UP:
-            if (getDirection() == up)
-                moveToIfPossible(getX(), getY() + 1);
-            else
-                setDirection(up);
-            break;
-
-        }
-
-    getWorld()->clearIce(getX(), getY(), getDirection());
-
+void Protester::pickNewDirection() {
+    // Logic to pick a new random direction and set m_numSquaresToMoveInCurrentDirection
+    m_numSquaresToMoveInCurrentDirection = 8 + rand() % 53;
+    Direction dir;
+    do {
+        dir = static_cast<Direction>(rand() % 4);
+    } while (!canMoveInDirection(dir));
+    setDirection(dir);
 }
 
-bool Iceman::annoy(int amount)
-{
-    if (Agent::annoy(amount)) {
+void Protester::moveToExit() {
+    // Logic to move towards the exit
+    // If the protester reaches the exit, set it as dead
+}
+
+// RegularProtester class implementation
+RegularProtester::RegularProtester(int startX, int startY, StudentWorld* world)
+    : Protester(IID_PROTESTER, startX, startY, world, 5) {}
+
+RegularProtester::~RegularProtester() {}
+
+void RegularProtester::doSomething() {
+    if (!isAlive()) return;
+
+    if (isResting()) {
+        setRestingTicks(m_restingTicks - 1);
+        return;
+    }
+
+    moveToNextPosition();
+    shoutIfCloseToIceman();
+    setRestingTicks(3);
+}
+
+// HardcoreProtester class implementation
+HardcoreProtester::HardcoreProtester(int startX, int startY, StudentWorld* world)
+    : Protester(IID_HARD_CORE_PROTESTER, startX, startY, world, 20) {}
+
+HardcoreProtester::~HardcoreProtester() {}
+
+void HardcoreProtester::doSomething() {
+    if (!isAlive()) return;
+
+    if (isResting()) {
+        setRestingTicks(m_restingTicks - 1);
+        return;
+    }
+
+    moveToNextPosition();
+    shoutIfCloseToIceman();
+    setRestingTicks(3);
+    // Additional logic for hardcore protester behavior
+}
+
+// SonarKit class implementation
+SonarKit::SonarKit(int startX, int startY, StudentWorld* world)
+    : Actor(IID_SONAR, startX, startY, right, 1.0, 2, world) {}
+
+SonarKit::~SonarKit() {}
+
+void SonarKit::doSomething() {
+    if (!isAlive()) return;
+
+    // Logic to check if Iceman picks up Sonar Kit
+    if (getWorld()->getIcemanX() == getX() && getWorld()->getIcemanY() == getY()) {
+        getWorld()->increaseScore(75);
         setDead();
-        getWorld()->playSound(SOUND_PLAYER_GIVE_UP);
-        return true;    // return true if IceMan is completely annoyed
     }
-    return false;       // still got HP left
 }
 
+// WaterPool class implementation
+WaterPool::WaterPool(int startX, int startY, StudentWorld* world)
+    : Actor(IID_WATER_POOL, startX, startY, right, 1.0, 2, world), m_ticksLeft(100) {}
 
+WaterPool::~WaterPool() {}
 
-//Boulder-------------------------------------------------------------
-void Boulder::move()
-{
+void WaterPool::doSomething() {
     if (!isAlive()) return;
 
-    if (m_state == STATE_STABLE)
-    {
-        if (!isIceBelow())
-        {
-            m_state = STATE_WAITING;
-            m_waitTicks = 30;
-        }
+    if (m_ticksLeft > 0) {
+        m_ticksLeft--;
     }
-    else if (m_state == STATE_WAITING)
-    {
-        if (m_waitTicks > 0)
-        {
-            m_waitTicks--;
-        }
-        else
-        {
-            m_state = STATE_FALLING;
-            getWorld()->playSound(SOUND_FALLING_ROCK);
-        }
-
+    else {
+        setDead();
     }
-    else if (m_state == STATE_FALLING)
-    {
-        //Doing check ice only for now, need to add check for other boulders too
-        if (!isIceBelow())
-        {
-            moveTo(getX(), getY() - 1);
-            // getWorld()->boulderProtestor(int x, int y);
-             //^ this function should check if there is a protestor at that location and
-             // annoy(100) if there is.
-        }
-        else
-        {
-            setDead();
-        }
-
-        /* if (canFallTo(getX(), getY() - 1))
-         {
-             moveTo(getX(), getY() - 1);
-             getWorld()->checkr(this);
-         }
-         else
-         {
-             setDead();
-         }*/
+    // Logic to check if Iceman picks up Water Pool
+    if (getWorld()->getIcemanX() == getX() && getWorld()->getIcemanY() == getY()) {
+        getWorld()->increaseScore(100);
+        setDead();
     }
 }
 
 
-bool Boulder::isIceBelow()
-{
-    int x = getX();
-    int y = getY() - 1;
-
-    for (int i = 0; i < 4; ++i)
-    {
-        if (getWorld()->checkIce(x + i, y))
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
-//bool Boulder::canFallTo(int x, int y) const
-//{
-//    if (y < 0 || getWorld()->checkIce(x, y)
-//    {
-//        return false;
-//    }
-//    return true;
-//}
+//==================================CHANGED===================================================
 
 
 
-//SQUIRT----------------------------------------------------------------
-void Squirt::move()
-{
+// Barrel class implementation
+Barrel::Barrel(int startX, int startY, StudentWorld* world)
+    : Actor(IID_BARREL, startX, startY, right, 1.0, 2, world) {}
+
+Barrel::~Barrel() {}
+
+void Barrel::doSomething() {
+    // 1. Check if the Barrel is currently alive
     if (!isAlive()) return;
 
-    //Check if it hit protestors
-    for (auto* protestor : getWorld()->getProtestors())
-    {
-        if (!protestor->isAlive() == false &&
-            getWorld()->checkRadius(getX(), getY(), protestor->getX(), protestor->getY(), 3))
-        {
-            protestor->annoy(2);
-            setDead();
-            return;
-        }
+    // 2. Check if the Barrel is not visible and the Iceman is within a radius of 4.0 units
+    if (!isVisible() && getWorld()->isNearIceman(getX(), getY(), 4.0)) {
+        setVisible(true);
+        return;
+    }
 
-        int nextX = getX();
-        int nextY = getY();
-
-        switch (getDirection())
-        {
-        case left:  nextX--; break;
-        case right: nextX++; break;
-        case up:    nextY++; break;
-        case down:  nextY--; break;
-        default:    break;
-        }
-
-        //check if it hit ice or boulders
-        if (getWorld()->checkIceBoulder(nextX, nextY, this->getDirection()))
-        {
-            setDead();
-            return;
-        }
-
-        //int nextX = getX();
-        //int nextY = getY();
-
-        //switch (getDirection())
-        //{
-        //case left:  nextX--; break;
-        //case right: nextX++; break;
-        //case up:    nextY++; break;
-        //case down:  nextY--; break;
-        //default:    break;
-        //}
-
-        if (m_travelDis == 0)
-        {
-            setDead();
-            return;
-        }
-
-        moveTo(nextX, nextY);
-        m_travelDis--;
+    // 3. Check if the Barrel is within a radius of 3.0 units from the Iceman
+    if (getWorld()->isNearIceman(getX(), getY(), 3.0)) {
+        // a. Set Barrel state to dead
+        setDead();
+        // b. Play sound effect
+        getWorld()->playSound(SOUND_FOUND_OIL);
+        // c. Increase player's score by 1000 points
+        getWorld()->increaseScore(1000);
+        // d. Notify StudentWorld object if necessary
+        // Implement this part as per your StudentWorld class design
     }
 }
 
-void Protestor::findShortestPath(const int startX, const int startY, const int finalX, const int finalY) {
-    std::queue<std::pair<int, int>> xy;
-    int currStep = 0, currX, currY;
-
-    stepArray[finalX][finalY] = 0; // Start from the target position
-    xy.push(std::make_pair(finalX, finalY));
-
-    while (!xy.empty()) {
-        currX = xy.front().first;
-        currY = xy.front().second;
-        xy.pop();
-
-        if (currX == startX && currY == startY) {
-            didFindPath = true;
-            step = stepArray[currX][currY];
-            return;
-        }
-
-        currStep = stepArray[currX][currY];
-        ++currStep;
-
-        // Check all four directions
-        std::vector<std::pair<int, int>> directions = {
-            {currX, currY + 1}, // up
-            {currX, currY - 1}, // down
-            {currX - 1, currY}, // left
-            {currX + 1, currY}  // right
-        };
-
-        for (const auto& dir : directions) {
-            int nextX = dir.first;
-            int nextY = dir.second;
-
-            // Check bounds and if the cell is already visited
-            if (nextX >= 0 && nextX < VIEW_WIDTH && nextY >= 0 && nextY < VIEW_HEIGHT
-                && stepArray[nextX][nextY] == -1 && getWorld()->canActorMoveTo(this, nextX, nextY)) {
-                stepArray[nextX][nextY] = currStep;
-                xy.push(dir);
-            }
-        }
-    }
-
-    didFindPath = false; // If the path is not found
-}
-
-GraphObject::Direction Protestor::getDirectionToIceman() {
-    int icemanX, icemanY;
-    getWorld()->getIcemanPosition(icemanX, icemanY);
-
-    // Clear the step array before performing a new search
-    for (int i = 0; i < VIEW_WIDTH; ++i) {
-        for (int j = 0; j < VIEW_HEIGHT; ++j) {
-            stepArray[i][j] = -1;
-        }
-    }
-
-    findShortestPath(getX(), getY(), icemanX, icemanY);
-
-    // Determine the direction based on the shortest path
-    if (didFindPath) {
-        int currX = getX();
-        int currY = getY();
-
-        std::vector<std::pair<int, int>> directions = {
-            {currX, currY + 1}, // up
-            {currX, currY - 1}, // down
-            {currX - 1, currY}, // left
-            {currX + 1, currY}  // right
-        };
-
-        for (const auto& dir : directions) {
-            int nextX = dir.first;
-            int nextY = dir.second;
-
-            if (nextX >= 0 && nextX < VIEW_WIDTH && nextY >= 0 && nextY < VIEW_HEIGHT
-                && stepArray[nextX][nextY] == step - 1) {
-                if (nextX == currX && nextY == currY + 1) return up;
-                if (nextX == currX && nextY == currY - 1) return down;
-                if (nextX == currX - 1 && nextY == currY) return left;
-                if (nextX == currX + 1 && nextY == currY) return right;
-            }
-        }
-    }
-
-    return none; // If no path is found
-}
-
-void Protestor::move() {
-
-    if (!isAlive()) return;
-
- 
-
-    // Determine direction to Iceman
-    GraphObject::Direction dirToIceman = getDirectionToIceman();
-
-    // Move the protestor based on the determined direction
-    switch (dirToIceman) {
-    case up:
-        moveToIfPossible(getX(), getY() + 1);
-        break;
-    case down:
-        moveToIfPossible(getX(), getY() - 1);
-        break;
-    case left:
-        moveToIfPossible(getX() - 1, getY());
-        break;
-    case right:
-        moveToIfPossible(getX() + 1, getY());
-        break;
-    default:
-        break;
-    }
-}
-
-
-// Add the method to check if a move is possible for the protestor
-void Protestor::moveToIfPossible(int x, int y) {
-    if (getWorld()->canActorMoveTo(this, x, y)) {
-        moveTo(x, y);
-    }
-}
-
-// Students:  Add code to this file (if you wish), Actor.h, StudentWorld.h, and StudentWorld.cpp
+//============================================================================================
