@@ -29,10 +29,11 @@ public:
     bool isIceAt(int x, int y) const;
 
 
-    //==================================CHANGED===================================================
+    //=========================================CHANGED============================================
 
     bool isBoulderAt(int x, int y, double radius) const;
     bool isNearIceman(int x, int y, double radius) const;
+    double calculateDistance(int x1, int y1, int x2, int y2);
 
     //============================================================================================
 
