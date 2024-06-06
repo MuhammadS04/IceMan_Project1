@@ -60,16 +60,20 @@ private:
     int m_distanceTraveled;
 };
 
+//====================================CHANGED=========================================
 class GoldNugget : public Actor {
 public:
     GoldNugget(int startX, int startY, bool temporary, StudentWorld* world);
     virtual ~GoldNugget();
-    virtual void doSomething();
+    virtual void doSomething() override;
+    void setVisible(bool visible);
 
 private:
     bool m_temporary;
     int m_ticksLeft;
+    bool m_visible;
 };
+//=====================================================================================
 
 class Protester : public Actor {
 public:
@@ -124,7 +128,7 @@ private:
     int m_ticksLeft;
 };
 
-//==================================CHANGED===================================================
+//=====================================================================================
 
 class Barrel : public Actor {
 public:
