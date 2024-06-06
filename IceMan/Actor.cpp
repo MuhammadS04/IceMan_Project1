@@ -1,5 +1,6 @@
 #include "Actor.h"
 #include "StudentWorld.h"
+#include <queue>
 
 
 bool Agent::annoy(unsigned int amount)
@@ -240,48 +241,127 @@ void Squirt::move()
     }
 }
 
+void Protestor::findShortestPath(const int startX, const int startY, const int finalX, const int finalY) {
+    std::queue<std::pair<int, int>> xy;
+    int currStep = 0, currX, currY;
 
-void Protestor::move() {
-    if (!isAlive()) return; // Check if the Protestor is alive
+    stepArray[finalX][finalY] = 0; // Start from the target position
+    xy.push(std::make_pair(finalX, finalY));
 
-    // Decrement the ticks to next move
-   m_ticksToNextMove--;
+    while (!xy.empty()) {
+        currX = xy.front().first;
+        currY = xy.front().second;
+        xy.pop();
 
-    // If ticks to next move is zero, reset it and move the Protestor
-   // Adjust the delay for the next move
+        if (currX == startX && currY == startY) {
+            didFindPath = true;
+            step = stepArray[currX][currY];
+            return;
+        }
 
-        // Determine available directions
-        vector<GraphObject::Direction> possibleDirections;
-        if (getWorld()->canActorMoveTo(this, getX(), getY() + 1)) possibleDirections.push_back(GraphObject::up);
-        if (getWorld()->canActorMoveTo(this, getX(), getY() - 1)) possibleDirections.push_back(GraphObject::down);
-        if (getWorld()->canActorMoveTo(this, getX() - 1, getY())) possibleDirections.push_back(GraphObject::left);
-        if (getWorld()->canActorMoveTo(this, getX() + 1, getY())) possibleDirections.push_back(GraphObject::right);
+        currStep = stepArray[currX][currY];
+        ++currStep;
 
-        // Choose a random direction
-        if (!possibleDirections.empty()) {
-            int randomIndex = rand() % possibleDirections.size();
-            GraphObject::Direction randomDirection = possibleDirections[randomIndex];
+        // Check all four directions
+        std::vector<std::pair<int, int>> directions = {
+            {currX, currY + 1}, // up
+            {currX, currY - 1}, // down
+            {currX - 1, currY}, // left
+            {currX + 1, currY}  // right
+        };
 
-            // Move the Protestor in the chosen direction
-            switch (randomDirection) {
-            case GraphObject::up:
-                moveToIfPossible(getX(), getY() + 1);
-                break;
-            case GraphObject::down:
-                moveToIfPossible(getX(), getY() - 1);
-                break;
-            case GraphObject::left:
-                moveToIfPossible(getX() - 1, getY());
-                break;
-            case GraphObject::right:
-                moveToIfPossible(getX() + 1, getY());
-                break;
+        for (const auto& dir : directions) {
+            int nextX = dir.first;
+            int nextY = dir.second;
+
+            // Check bounds and if the cell is already visited
+            if (nextX >= 0 && nextX < VIEW_WIDTH && nextY >= 0 && nextY < VIEW_HEIGHT
+                && stepArray[nextX][nextY] == -1 && getWorld()->canActorMoveTo(this, nextX, nextY)) {
+                stepArray[nextX][nextY] = currStep;
+                xy.push(dir);
             }
         }
-    
+    }
+
+    didFindPath = false; // If the path is not found
+}
+
+GraphObject::Direction Protestor::getDirectionToIceman() {
+    int icemanX, icemanY;
+    getWorld()->getIcemanPosition(icemanX, icemanY);
+
+    // Clear the step array before performing a new search
+    for (int i = 0; i < VIEW_WIDTH; ++i) {
+        for (int j = 0; j < VIEW_HEIGHT; ++j) {
+            stepArray[i][j] = -1;
+        }
+    }
+
+    findShortestPath(getX(), getY(), icemanX, icemanY);
+
+    // Determine the direction based on the shortest path
+    if (didFindPath) {
+        int currX = getX();
+        int currY = getY();
+
+        std::vector<std::pair<int, int>> directions = {
+            {currX, currY + 1}, // up
+            {currX, currY - 1}, // down
+            {currX - 1, currY}, // left
+            {currX + 1, currY}  // right
+        };
+
+        for (const auto& dir : directions) {
+            int nextX = dir.first;
+            int nextY = dir.second;
+
+            if (nextX >= 0 && nextX < VIEW_WIDTH && nextY >= 0 && nextY < VIEW_HEIGHT
+                && stepArray[nextX][nextY] == step - 1) {
+                if (nextX == currX && nextY == currY + 1) return up;
+                if (nextX == currX && nextY == currY - 1) return down;
+                if (nextX == currX - 1 && nextY == currY) return left;
+                if (nextX == currX + 1 && nextY == currY) return right;
+            }
+        }
+    }
+
+    return none; // If no path is found
+}
+
+void Protestor::move() {
+
+    if (!isAlive()) return;
+
+ 
+
+    // Determine direction to Iceman
+    GraphObject::Direction dirToIceman = getDirectionToIceman();
+
+    // Move the protestor based on the determined direction
+    switch (dirToIceman) {
+    case up:
+        moveToIfPossible(getX(), getY() + 1);
+        break;
+    case down:
+        moveToIfPossible(getX(), getY() - 1);
+        break;
+    case left:
+        moveToIfPossible(getX() - 1, getY());
+        break;
+    case right:
+        moveToIfPossible(getX() + 1, getY());
+        break;
+    default:
+        break;
+    }
 }
 
 
-
+// Add the method to check if a move is possible for the protestor
+void Protestor::moveToIfPossible(int x, int y) {
+    if (getWorld()->canActorMoveTo(this, x, y)) {
+        moveTo(x, y);
+    }
+}
 
 // Students:  Add code to this file (if you wish), Actor.h, StudentWorld.h, and StudentWorld.cpp
