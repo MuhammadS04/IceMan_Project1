@@ -503,31 +503,32 @@ void WaterPool::doSomething() {
 
 
 // Barrel class implementation
+
+// Barrel class implementation
 Barrel::Barrel(int startX, int startY, StudentWorld* world)
-    : Actor(IID_BARREL, startX, startY, right, 1.0, 2, world) {}
+    : Actor(IID_BARREL, startX, startY, right, 1.0, 2, world) {
+    setVisible(false); // Initially invisible
+}
 
 Barrel::~Barrel() {}
 
 void Barrel::doSomething() {
-    // 1. Check if the Barrel is currently alive
     if (!isAlive()) return;
 
-    // 2. Check if the Barrel is not visible and the Iceman is within a radius of 4.0 units
-    if (!isVisible() && getWorld()->isNearIceman(getX(), getY(), 4.0)) {
-        setVisible(true);
-        return;
+    // Check if the Iceman is within 5 radius distance
+    int icemanX = getWorld()->getIcemanX();
+    int icemanY = getWorld()->getIcemanY();
+    int distance = getWorld()->calculateDistance(getX(), getY(), icemanX, icemanY);
+
+    if (!isVisible() && distance <= 5) {
+        setVisible(true); // Make the barrel visible
     }
 
-    // 3. Check if the Barrel is within a radius of 3.0 units from the Iceman
-    if (getWorld()->isNearIceman(getX(), getY(), 3.0)) {
-        // a. Set Barrel state to dead
-        setDead();
-        // b. Play sound effect
-        getWorld()->playSound(SOUND_FOUND_OIL);
-        // c. Increase player's score by 1000 points
-        getWorld()->increaseScore(1000);
-        // d. Notify StudentWorld object if necessary
-        // Implement this part as per your StudentWorld class design
+    // Logic to handle barrel being picked up
+    if (isVisible() && icemanX == getX() && icemanY == getY()) {
+        setDead(); // Barrel picked up, set it as dead
+        getWorld()->increaseScore(1000); // Increase score for picking up barrel
+        getWorld()->playSound(SOUND_FOUND_OIL); // Play sound effect
     }
 }
 
