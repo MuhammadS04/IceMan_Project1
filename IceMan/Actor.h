@@ -241,44 +241,38 @@ public:
 	virtual void move();
 
 };
-
+ 
 
 class Protestor : public Agent
 {
-private:
-	bool m_mustLeaveField;
-	int m_numOfTicks;
-	unsigned int m_score;
-	int m_ticksToNextMove;
 public:
-	Protestor::Protestor(StudentWorld* world, int startX, int startY)
-		: Agent(world, startX, startY, left, IID_PROTESTER, 9)
-		, m_mustLeaveField(false), m_score(0)
+	Protestor(StudentWorld* world, int startX, int startY)
+		: Agent(world, startX, startY, left, IID_PROTESTER, 5) // Assuming a Protestor starts with 5 hit points
 	{
-		setVisible(true);
-		//m_numOfTicks = fmax(0, 3 - getWorld()->getLevel() / 4);
-		m_numOfTicks = 8;
+		// Initialize the stepArray to -1, indicating unvisited cells
+		for (int i = 0; i < VIEW_WIDTH; ++i)
+			for (int j = 0; j < VIEW_HEIGHT; ++j)
+				stepArray[i][j] = -1;
 	}
 
-	virtual void move() ;
-	virtual bool annoy(unsigned int amount) {
-		return false;
+	virtual void move() override;
+
+	void moveToIfPossible(int x, int y);
+
+	void findShortestPath(const int startX, const int startY, const int finalX, const int finalY);
+
+	virtual void addGold() override {
+		// Implementation for adding gold
 	}
-	virtual void addGold() {};
-	//virtual bool huntsIceman() const {};
 
-	//void setMustLeaveOilField();
+	GraphObject::Direction getDirectionToIceman();
 
-	//void setTicksToNextMove();
-
+private:
+	int stepArray[VIEW_WIDTH][VIEW_HEIGHT]; // Array to keep track of steps
+	bool didFindPath = false;
+	int step = 0;
+	int m_ticksSinceLastMove;
 };
 
-class RegularProtestor : public Protestor
-{
-public:
-	RegularProtestor(StudentWorld* world, int startX, int startY, int imageID);
-	virtual void move();
-	virtual void addGold();
-};
 
 #endif // ACTOR_H_
